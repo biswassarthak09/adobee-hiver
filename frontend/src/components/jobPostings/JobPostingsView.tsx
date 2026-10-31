@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRequisitions } from '../../services/api';
 import { Department, RequisitionStatus } from '../../types';
 import { DepartmentTabs } from './DepartmentTabs';
@@ -9,7 +9,7 @@ export const JobPostingsView: React.FC = () => {
   const [selectedDept, setSelectedDept] = useState<Department>('All Departments');
   const [selectedStatus, setSelectedStatus] = useState<RequisitionStatus | 'All'>('All');
   const [searchInput, setSearchInput] = useState('');
-  const { globalSearchQuery } = useNavigation();
+  const { globalSearchQuery, selectedRequisitionId, setSelectedRequisitionId } = useNavigation();
 
   const effectiveSearch = searchInput || globalSearchQuery;
   const { data: requisitions = [], isLoading } = useRequisitions(
@@ -18,8 +18,13 @@ export const JobPostingsView: React.FC = () => {
     effectiveSearch
   );
 
-  const featuredReq = requisitions.find((r) => r.reqCode === 'AH-2049') || requisitions[0];
-  const regularReqs = requisitions.filter((r) => r.id !== featuredReq?.id);
+  useEffect(() => {
+    const selectedId = Number(selectedRequisitionId.replace(/\D/g, ''));
+    if (requisitions.length > 0 &&
+        !requisitions.some((requisition) => Number(requisition.id) === selectedId)) {
+      setSelectedRequisitionId(requisitions[0].id);
+    }
+  }, [requisitions, selectedRequisitionId, setSelectedRequisitionId]);
 
   return (
     <div className="w-full min-h-screen bg-background px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -61,7 +66,7 @@ export const JobPostingsView: React.FC = () => {
                   Total Talent
                 </span>
                 <span className="font-mono text-lg text-on-surface font-bold">
-                  {requisitions.reduce((acc, r) => acc + (r.applicantsCount || 24), 0)}
+                  {requisitions.reduce((acc, r) => acc + r.applicantsCount, 0)}
                 </span>
               </div>
               <div className="flex flex-col px-3 py-1.5">
@@ -69,7 +74,7 @@ export const JobPostingsView: React.FC = () => {
                   Shortlisted
                 </span>
                 <span className="font-mono text-lg text-secondary font-bold">
-                  {requisitions.reduce((acc, r) => acc + (r.pipeline?.review || 6), 0)}
+                  {requisitions.reduce((acc, r) => acc + r.pipeline.review, 0)}
                 </span>
               </div>
               <div className="flex flex-col px-3 py-1.5">
@@ -77,7 +82,7 @@ export const JobPostingsView: React.FC = () => {
                   In Interview
                 </span>
                 <span className="font-mono text-lg text-tertiary font-bold">
-                  {requisitions.reduce((acc, r) => acc + (r.pipeline?.techRound || 3), 0)}
+                  {requisitions.reduce((acc, r) => acc + r.pipeline.techRound, 0)}
                 </span>
               </div>
             </div>
@@ -165,68 +170,10 @@ export const JobPostingsView: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-6">
-          {featuredReq && <RequisitionCard requisition={featuredReq} featured />}
-
-          {regularReqs.map((req) => (
-            <div key={req.id} className="md:col-span-1 xl:col-span-6">
-              <RequisitionCard requisition={req} />
-            </div>
-          ))}
+          {requisitions.map((req) => <RequisitionCard key={req.id} requisition={req} featured />)}
         </div>
       )}
 
-      {/* Bottom Efficiency & Analytics Intelligence Bar */}
-      <div className="bg-surface-container-low rounded-xl p-6 shadow-lg border border-white/5">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center gap-4 bg-surface-container-lowest p-4 rounded-xl border border-white/5">
-            <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-[28px]">speed</span>
-            </div>
-            <div>
-              <span className="font-mono text-[10px] text-on-surface-variant uppercase tracking-wider block">
-                Mean Time-to-Hire
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="font-headline text-2xl text-on-surface font-bold">18.4</span>
-                <span className="text-xs text-tertiary font-semibold">-4.2 days vs Q2 benchmark</span>
-              </div>
-              <span className="font-mono text-xs text-on-surface-variant">AI Auto-Screening active</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 bg-surface-container-lowest p-4 rounded-xl border border-white/5">
-            <div className="w-12 h-12 rounded-lg bg-tertiary/10 border border-tertiary/20 flex items-center justify-center text-tertiary">
-              <span className="material-symbols-outlined text-[28px]">handshake</span>
-            </div>
-            <div>
-              <span className="font-mono text-[10px] text-on-surface-variant uppercase tracking-wider block">
-                Offer Acceptance Index
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="font-headline text-2xl text-on-surface font-bold">91.8%</span>
-                <span className="text-xs text-tertiary font-semibold">+6.4% acceptance delta</span>
-              </div>
-              <span className="font-mono text-xs text-on-surface-variant">11 of 12 accepted</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 bg-surface-container-lowest p-4 rounded-xl border border-white/5">
-            <div className="w-12 h-12 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary">
-              <span className="material-symbols-outlined text-[28px]">auto_awesome</span>
-            </div>
-            <div>
-              <span className="font-mono text-[10px] text-on-surface-variant uppercase tracking-wider block">
-                Autonomous Inbound Yield
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="font-headline text-2xl text-on-surface font-bold">2.4x</span>
-                <span className="text-xs text-secondary font-semibold">vs traditional cold sourcing</span>
-              </div>
-              <span className="font-mono text-xs text-on-surface-variant">Continuous candidate indexing</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

@@ -131,12 +131,22 @@ export interface ChatMessage {
   timestamp: string;
   text: string;
   breakdown?: {
-    ragCandidates: string;
-    ragRatio: number;
-    ossCandidates: string;
-    ossRatio: number;
+    matchedCandidates: string;
+    matchedRatio: number;
+    removedCandidates: string;
+    removedRatio: number;
     highlightProfile: string;
   };
+}
+
+export interface ChatSession {
+  id: string | number;
+  positionId: string;
+  positionTitle: string;
+  createdAt?: string;
+  updatedAt?: string;
+  messages: ChatMessage[];
+  currentCandidateIds?: number[];
 }
 
 export interface FunnelStage {
@@ -181,6 +191,7 @@ export type ActiveView =
   | 'cv-uploader'
   | 'candidate-search' 
   | 'candidate-dossier' 
+  | 'chat-sessions'
   | 'analytics-pipelines' 
   | 'settings-team';
 
@@ -190,6 +201,8 @@ export interface BackendPosition {
   title: string;
   description: string | null;
   custom_fields?: Array<{ name: string; description?: string }>;
+  applicants_count?: number;
+  status_counts?: Record<string, number>;
 }
 
 export interface BackendUploadResult {

@@ -17,6 +17,7 @@ export const Sidebar: React.FC = () => {
     { id: 'cv-uploader', label: 'Upload CVs', icon: 'upload_file' },
     { id: 'candidate-search', label: 'Candidate Search', icon: 'person_search', badge: 'AI' },
     { id: 'candidate-dossier', label: 'Candidate Dossier', icon: 'badge' },
+    { id: 'chat-sessions', label: 'Chat Sessions', icon: 'chat' },
     { id: 'analytics-pipelines', label: 'Analytics & Pipelines', icon: 'monitoring' },
     { id: 'settings-team', label: 'Settings & Team', icon: 'settings' },
   ];

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { uploadCVs, useRequisitions } from '../../services/api';
+import { uploadCVs, useCVStatuses, useRequisitions } from '../../services/api';
 import { useNavigation } from '../../context/NavigationContext';
 
 const ACCEPTED_TYPES = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.webp']);
@@ -13,6 +13,7 @@ export const CVUploaderView: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [message, setMessage] = useState<{ text: string; success: boolean } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [trackedCVIds, setTrackedCVIds] = useState<number[]>([]);
 
   const selectedPositionId = useMemo(() => {
     const numericId = Number(selectedRequisitionId.replace(/\D/g, ''));
@@ -20,6 +21,8 @@ export const CVUploaderView: React.FC = () => {
       ? numericId
       : Number(requisitions[0]?.id);
   }, [requisitions, selectedRequisitionId]);
+  const { data: cvStatuses = [] } = useCVStatuses(selectedPositionId);
+  const visibleStatuses = cvStatuses.filter((cv) => trackedCVIds.includes(cv.id));
 
   const addFiles = (selected: FileList | null) => {
     if (!selected) return;
@@ -48,6 +51,8 @@ export const CVUploaderView: React.FC = () => {
     setMessage(null);
     try {
       const results = await uploadCVs(selectedPositionId, files);
+      setTrackedCVIds(results.flatMap((result) => result.id ? [result.id] : []));
+      await queryClient.invalidateQueries({ queryKey: ['cv-statuses', selectedPositionId] });
       await queryClient.invalidateQueries({ queryKey: ['candidates'] });
       const rejected = results.filter((result) => result.status === 'rejected');
       setFiles([]);
@@ -96,6 +101,21 @@ export const CVUploaderView: React.FC = () => {
           {files.length > 0 && (
             <div className="space-y-1 text-sm text-on-surface-variant">
               {files.map((file) => <div key={`${file.name}-${file.size}`}>{file.name}</div>)}
+            </div>
+          )}
+          {visibleStatuses.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-mono uppercase text-on-surface-variant">
+                Processing status
+              </div>
+              {visibleStatuses.map((cv) => (
+                <div key={cv.id} className="flex items-center justify-between gap-3 text-xs text-on-surface-variant">
+                  <span className="truncate">{cv.filename}</span>
+                  <span className={cv.status === 'done' ? 'text-tertiary' : cv.status === 'failed' || cv.status === 'rejected' ? 'text-error' : 'text-primary'}>
+                    {cv.status}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
           {message && <div className={`text-xs p-3 rounded-lg ${message.success ? 'text-tertiary bg-tertiary/10' : 'text-error bg-error/10'}`}>{message.text}</div>}

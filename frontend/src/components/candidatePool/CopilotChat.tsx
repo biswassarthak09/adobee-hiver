@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { ChatMessage } from '../../types';
-import { mockChatDialogue } from '../../services/mockData';
-import { useRecruiterFilter, useResetRecruiterFilter } from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { BackendCandidateBrief, ChatMessage } from '../../types';
+import { fetchChatSession, saveChatSession, useRecruiterFilter, useResetRecruiterFilter } from '../../services/api';
 import { useNavigation } from '../../context/NavigationContext';
 
 interface CopilotChatProps {
@@ -9,6 +8,8 @@ interface CopilotChatProps {
   onAddToken: (token: string) => void;
   onRemoveToken: (token: string) => void;
   onResetTokens: () => void;
+  onFilterResult?: (candidates: BackendCandidateBrief[] | null) => void;
+  positionTitle?: string;
 }
 
 export const CopilotChat: React.FC<CopilotChatProps> = ({
@@ -16,18 +17,32 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
   onAddToken,
   onRemoveToken,
   onResetTokens,
+  onFilterResult,
+  positionTitle = 'Selected position',
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>(mockChatDialogue);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputPrompt, setInputPrompt] = useState('');
   const { selectedRequisitionId } = useNavigation();
   const filterMutation = useRecruiterFilter();
   const resetMutation = useResetRecruiterFilter();
+  const [currentIds, setCurrentIds] = useState<number[] | undefined>();
 
-  const quickPrompts = [
-    { label: '+ Prior Founders', token: 'Prior Founders' },
-    { label: '+ Notice < 2 weeks', token: 'Notice < 2 weeks' },
-    { label: '+ Top Tier (Scale/OpenAI)', token: 'Top Tier Engineering' },
-  ];
+  useEffect(() => {
+    let active = true;
+    setMessages([]);
+    setCurrentIds(undefined);
+    onFilterResult?.(null);
+    if (!selectedRequisitionId) return () => { active = false; };
+    fetchChatSession(selectedRequisitionId).then((session) => {
+      if (!active || session.messages.length === 0) return;
+      setMessages(session.messages);
+      setCurrentIds(session.currentCandidateIds);
+      onFilterResult?.(session.candidates);
+    }).catch(() => {
+      if (active) setMessages([]);
+    });
+    return () => { active = false; };
+  }, [selectedRequisitionId]);
 
   const handleReset = async () => {
     try {
@@ -35,8 +50,13 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
     } catch {
       // fallback
     }
-    setMessages(mockChatDialogue);
+    setMessages([]);
+    setCurrentIds(undefined);
+    onFilterResult?.(null);
     onResetTokens();
+    void saveChatSession(selectedRequisitionId, [], []).catch((error) => {
+      console.error('Unable to reset chat session:', error);
+    });
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -51,19 +71,11 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
       text: userText,
     };
 
-    // Extract quick criteria tokens from user message synchronously
-    const extracted: string[] = [];
-    if (/5\+?\s*(yrs|years)/i.test(userText)) extracted.push('Exp: 5+ yrs');
-    if (/rag|llm|agent/i.test(userText)) extracted.push('Domain: RAG / LLM');
-    if (/sf|hybrid|san francisco/i.test(userText)) extracted.push('Location: SF Hybrid');
-    if (/founder/i.test(userText)) extracted.push('Prior Founders');
-    if (/notice|immediate/i.test(userText)) extracted.push('Notice < 2 weeks');
-
-    extracted.forEach((t) => {
-      if (!activeTokens.includes(t)) onAddToken(t);
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
+    void saveChatSession(selectedRequisitionId, nextMessages, currentIds || []).catch((error) => {
+      console.error('Unable to save chat session:', error);
     });
-
-    setMessages((prev) => [...prev, userMsg]);
     setInputPrompt('');
 
     // Attempt real backend Recruiter Agent filtering
@@ -71,7 +83,10 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
       const res = await filterMutation.mutateAsync({
         positionId: selectedRequisitionId,
         request: userText,
+        currentIds,
       });
+      setCurrentIds(res.ids);
+      onFilterResult?.(res.candidates || []);
 
       if (res?.plan?.conditions) {
         res.plan.conditions.forEach((c) => {
@@ -88,37 +103,35 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
         timestamp: 'Just now',
         text: res.explanation || `Filtered candidate pool against query criteria: "${userText}".`,
         breakdown: {
-          ragCandidates: `${res.count} Candidates Remaining`,
-          ragRatio: Math.min(100, Math.round((res.count / Math.max(1, res.previous_count || res.count)) * 100)),
-          ossCandidates: `${res.removed} Removed by Filter`,
-          ossRatio: Math.min(100, Math.round((res.removed / Math.max(1, res.previous_count || 1)) * 100)),
+          matchedCandidates: `${res.count} candidates remaining`,
+          matchedRatio: Math.min(100, Math.round((res.count / Math.max(1, res.previous_count || res.count)) * 100)),
+          removedCandidates: `${res.removed} removed`,
+          removedRatio: Math.min(100, Math.round((res.removed / Math.max(1, res.previous_count || 1)) * 100)),
           highlightProfile: res.plan?.conditions?.[0]?.requirement
             ? `Vector: ${res.plan.conditions[0].requirement}`
             : 'Candidate pool updated according to natural language query.',
         },
       };
 
-      setMessages((prev) => [...prev, aiMsg]);
+      const completedMessages = [...nextMessages, aiMsg];
+      setMessages(completedMessages);
+      void saveChatSession(selectedRequisitionId, completedMessages, res.ids).catch((error) => {
+        console.error('Unable to save chat session:', error);
+      });
       return;
-    } catch {
-      // Fallback AI simulation if backend endpoint is unavailable
+    } catch (error) {
+      const errorMsg: ChatMessage = {
+        id: `msg-error-${Date.now()}`,
+        sender: 'copilot',
+        timestamp: 'Just now',
+        text: error instanceof Error ? `Filter failed: ${error.message}` : 'Filter failed.',
+      };
+      const failedMessages = [...nextMessages, errorMsg];
+      setMessages(failedMessages);
+      void saveChatSession(selectedRequisitionId, failedMessages, currentIds || []).catch((error) => {
+        console.error('Unable to save chat session:', error);
+      });
     }
-
-    const fallbackAiMsg: ChatMessage = {
-      id: `msg-ai-${Date.now()}`,
-      sender: 'copilot',
-      timestamp: 'Just now',
-      text: `Filtered candidate pool against query criteria: "${userText}". Updated vector rankings accordingly.`,
-      breakdown: {
-        ragCandidates: '4/6 Candidates',
-        ragRatio: 66,
-        ossCandidates: '2/6 Candidates',
-        ossRatio: 33,
-        highlightProfile: 'Dr. Elena Rostova remains the highest affinity match at 98% cosine alignment.',
-      },
-    };
-
-    setMessages((prev) => [...prev, fallbackAiMsg]);
   };
 
   return (
@@ -189,24 +202,24 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
               {msg.breakdown && (
                 <div className="bg-surface-container-lowest p-2.5 rounded-lg space-y-2 border border-white/5">
                   <div className="flex justify-between items-center font-mono text-xs">
-                    <span className="text-on-surface-variant">Production RAG Architecture</span>
-                    <span className="text-tertiary font-semibold">{msg.breakdown.ragCandidates}</span>
+                    <span className="text-on-surface-variant">Matched candidates</span>
+                    <span className="text-tertiary font-semibold">{msg.breakdown.matchedCandidates}</span>
                   </div>
                   <div className="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
                     <div
                       className="bg-tertiary h-full rounded-full"
-                      style={{ width: `${msg.breakdown.ragRatio}%` }}
+                      style={{ width: `${msg.breakdown.matchedRatio}%` }}
                     />
                   </div>
 
                   <div className="flex justify-between items-center font-mono text-xs pt-1">
-                    <span className="text-on-surface-variant">OSS / Patents Contributor</span>
-                    <span className="text-secondary font-semibold">{msg.breakdown.ossCandidates}</span>
+                    <span className="text-on-surface-variant">Removed by filter</span>
+                    <span className="text-secondary font-semibold">{msg.breakdown.removedCandidates}</span>
                   </div>
                   <div className="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
                     <div
                       className="bg-secondary h-full rounded-full"
-                      style={{ width: `${msg.breakdown.ossRatio}%` }}
+                      style={{ width: `${msg.breakdown.removedRatio}%` }}
                     />
                   </div>
 
@@ -255,7 +268,7 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
           ))}
           {activeTokens.length === 0 && (
             <span className="text-xs text-on-surface-variant italic">
-              No active criteria tokens. Type prompt or click quick tags.
+              No active criteria yet. Submit a natural-language query to begin.
             </span>
           )}
         </div>
@@ -295,7 +308,7 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
                 <span className="material-symbols-outlined text-[18px]">tune</span>
               </button>
               <span className="font-mono text-[10px] text-on-surface-variant/70 ml-1">
-                Context: Req #AH-2049
+                Context: {positionTitle || 'Selected position'}
               </span>
             </div>
 
@@ -309,22 +322,6 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
           </div>
         </div>
 
-        {/* Quick Query Presets */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-2 no-scrollbar">
-          <span className="font-mono text-[10px] text-on-surface-variant uppercase shrink-0">
-            Quick prompts:
-          </span>
-          {quickPrompts.map((p) => (
-            <button
-              key={p.token}
-              type="button"
-              onClick={() => onAddToken(p.token)}
-              className="shrink-0 bg-surface-container-high hover:bg-surface-container-highest px-2 py-0.5 rounded text-on-surface-variant hover:text-on-surface font-mono text-xs border border-white/5 transition-colors"
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
       </form>
     </div>
   );

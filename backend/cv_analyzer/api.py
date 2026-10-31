@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal, Optional
@@ -13,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import config
-from .db import (CandidateProfile, CandidateSkill, CVDocument, Organization, Position,
+from .db import (CandidateProfile, CandidateSkill, CVDocument, ChatSession, Organization, Position,
                  SessionLocal, init_db)
 from .documents import SUPPORTED_EXT
 from .recruiter_agent import (all_candidate_ids, apply_recruiter_request, candidate_briefs,
@@ -135,8 +136,20 @@ def new_position(body: PositionCreate, org=Depends(current_org), db: Session = D
 @app.get("/positions")
 def list_positions(org=Depends(current_org), db: Session = Depends(get_db)):
     rows = db.scalars(select(Position).where(Position.org_id == org.id)).all()
-    return [{"id": p.id, "title": p.title, "description": p.description,
-             "custom_fields": p.custom_fields} for p in rows]
+    result = []
+    for p in rows:
+        counts = dict(db.execute(
+            select(CVDocument.status, func.count(CVDocument.id))
+            .where(CVDocument.org_id == org.id, CVDocument.position_id == p.id)
+            .group_by(CVDocument.status)
+        ).all())
+        result.append({
+            "id": p.id, "title": p.title, "description": p.description,
+            "custom_fields": p.custom_fields,
+            "applicants_count": sum(counts.values()),
+            "status_counts": counts,
+        })
+    return result
 
 
 # ---------- CVs ----------
@@ -243,6 +256,11 @@ class FilterRequest(BaseModel):
     ids: Optional[list[int]] = None  # current candidate ids; omit to start from all of the position
 
 
+class ChatSessionRequest(BaseModel):
+    messages: list[dict] = []
+    current_candidate_ids: list[int] = []
+
+
 def _filter_response(db: Session, r) -> dict:
     return {"ids": r.ids, "count": len(r.ids), "action": r.action, "explanation": r.explanation,
             "previous_count": r.previous_count, "removed": r.removed, "plan": r.plan,
@@ -267,3 +285,78 @@ def filter_candidates(position_id: int, body: FilterRequest,
 def reset_candidate_filters(position_id: int, org=Depends(current_org), db: Session = Depends(get_db)):
     _position_or_404(db, org, position_id)
     return _filter_response(db, reset_filters(db, org.id, position_id))
+
+
+@app.get("/chat-sessions")
+def list_chat_sessions(org=Depends(current_org), db: Session = Depends(get_db)):
+    rows = db.scalars(
+        select(ChatSession)
+        .where(ChatSession.org_id == org.id)
+        .order_by(ChatSession.updated_at.desc())
+    ).all()
+    positions = {
+        p.id: p.title for p in db.scalars(select(Position).where(Position.org_id == org.id)).all()
+    }
+    return [{
+        "id": row.id,
+        "position_id": row.position_id,
+        "position_title": positions.get(row.position_id, "Deleted position"),
+        "created_at": row.created_at.isoformat(),
+        "updated_at": row.updated_at.isoformat(),
+        "messages": row.messages or [],
+        "current_candidate_ids": row.current_candidate_ids or [],
+    } for row in rows]
+
+
+@app.get("/positions/{position_id}/chat-session")
+def get_chat_session(position_id: int, org=Depends(current_org), db: Session = Depends(get_db)):
+    _position_or_404(db, org, position_id)
+    row = db.scalar(select(ChatSession).where(
+        ChatSession.org_id == org.id,
+        ChatSession.position_id == position_id,
+    ))
+    if row is None:
+        return {
+            "id": None,
+            "position_id": position_id,
+            "messages": [],
+            "current_candidate_ids": [],
+            "candidates": [],
+        }
+    return {
+        "id": row.id,
+        "position_id": row.position_id,
+        "messages": row.messages or [],
+        "current_candidate_ids": row.current_candidate_ids or [],
+        "candidates": candidate_briefs(db, row.current_candidate_ids or []),
+    }
+
+
+@app.put("/positions/{position_id}/chat-session")
+def save_chat_session(position_id: int, body: ChatSessionRequest,
+                      org=Depends(current_org), db: Session = Depends(get_db)):
+    _position_or_404(db, org, position_id)
+    row = db.scalar(select(ChatSession).where(
+        ChatSession.org_id == org.id,
+        ChatSession.position_id == position_id,
+    ))
+    if row is None:
+        row = ChatSession(
+            org_id=org.id,
+            position_id=position_id,
+            messages=body.messages,
+            current_candidate_ids=body.current_candidate_ids,
+        )
+        db.add(row)
+    else:
+        row.messages = body.messages
+        row.current_candidate_ids = body.current_candidate_ids
+        row.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(row)
+    return {
+        "id": row.id,
+        "position_id": row.position_id,
+        "messages": row.messages or [],
+        "current_candidate_ids": row.current_candidate_ids or [],
+    }
