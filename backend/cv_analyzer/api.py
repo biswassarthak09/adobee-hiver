@@ -96,9 +96,7 @@ def admin_create_org(body: OrgCreate, db: Session = Depends(get_db)):
         org = create_organization(db, body.name)
     except IntegrityError:
         raise HTTPException(409, "Organization already exists")
-    positions = import_job_postings(db, org.id, Path(__file__).resolve().parent.parent / "job_postings")
-    return {"id": org.id, "name": org.name, "api_key": org.api_key,
-            "positions": [{"id": p.id, "title": p.title} for p in positions]}
+    return {"id": org.id, "name": org.name, "api_key": org.api_key, "positions": []}
 
 
 @app.post("/admin/organizations/{org_id}/import-job-postings",
@@ -117,7 +115,7 @@ def admin_bootstrap_org(body: OrgCreate, db: Session = Depends(get_db)):
     org = db.scalar(select(Organization).where(Organization.name == body.name))
     if org is None:
         org = create_organization(db, body.name)
-    positions = import_job_postings(db, org.id, Path(__file__).resolve().parent.parent / "job_postings")
+    positions = db.scalars(select(Position).where(Position.org_id == org.id)).all()
     return {"id": org.id, "name": org.name, "api_key": org.api_key,
     "positions": [{"id": p.id, "title": p.title} for p in positions]}
 
