@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # 1. The Database (Pulled directly from Docker Hub)
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: hr_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db-init/init.sql:/docker-entrypoint-initdb.d/init.sql # Auto-creates tables
+
+  # 2. The Python Backend (Built from your /backend folder)
+  backend:
+    build: 
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://admin:secretpassword@db:5432/hr_database
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - db
+
+  # 3. The React Frontend (Built from your /frontend folder)
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80" # Nginx serves on 80 inside the container, maps to 3000 on your machine
+    depends_on:
+      - backend
+
+volumes:
+  pgdata: # Keeps your database data safe even if the container stops
