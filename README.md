@@ -50,6 +50,10 @@ docker compose logs --tail=100 backend
 Then use the UI to confirm job postings, upload a CV, wait for processing, run a candidate
 filter, and reopen the Chat Sessions page to confirm the conversation is restored.
 
+New installations start without job postings. Use **Add Job Posting** in the UI and paste the
+title and description before uploading CVs. The repository's `backend/job_postings/` files are
+optional sample data for the legacy import/CLI workflow; the web product does not depend on them.
+
 ## Data and operations
 
 PostgreSQL data is stored in the named Docker volume `pgdata`. Stopping containers does not

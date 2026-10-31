@@ -333,33 +333,26 @@ export function useRequisitions(
   return useQuery({
     queryKey: ['requisitions', department, status, searchQuery],
     queryFn: async (): Promise<Requisition[]> => {
-      try {
-        const positions = await fetchWithAuth<BackendPosition[]>('/positions');
-        if (positions && Array.isArray(positions)) {
-          let list = positions.map(mapBackendPositionToRequisition);
+      const positions = await fetchWithAuth<BackendPosition[]>('/positions');
+      let list = (positions || []).map(mapBackendPositionToRequisition);
 
-          if (department !== 'All Departments') {
-            list = list.filter((r) => r.department === department);
-          }
-          if (status !== 'All') {
-            list = list.filter((r) => r.status === status);
-          }
-          if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            list = list.filter(
-              (r) =>
-                r.title.toLowerCase().includes(q) ||
-                r.reqCode.toLowerCase().includes(q) ||
-                r.skills.some((s) => s.toLowerCase().includes(q))
-            );
-          }
-          return list;
-        }
-      } catch {
-        // Return empty list on connection error or unseeded db
+      if (department !== 'All Departments') {
+        list = list.filter((r) => r.department === department);
       }
-
-      return [];
+      if (status !== 'All') {
+        list = list.filter((r) => r.status === status);
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        list = list.filter(
+          (r) =>
+            r.title.toLowerCase().includes(q) ||
+            r.reqCode.toLowerCase().includes(q) ||
+            r.skills.some((s) => s.toLowerCase().includes(q)) ||
+            r.hiringLead.name.toLowerCase().includes(q)
+        );
+      }
+      return list;
     },
   });
 }
