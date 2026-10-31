@@ -18,7 +18,8 @@ from .db import (CandidateProfile, CandidateSkill, CVDocument, Organization, Pos
 from .documents import SUPPORTED_EXT
 from .recruiter_agent import (all_candidate_ids, apply_recruiter_request, candidate_briefs,
                               reset_filters)
-from .service import create_organization, create_position, process_document, register_file
+from .service import (create_organization, create_position, import_job_postings,
+                      process_document, register_file)
 
 
 @asynccontextmanager
@@ -94,7 +95,30 @@ def admin_create_org(body: OrgCreate, db: Session = Depends(get_db)):
         org = create_organization(db, body.name)
     except IntegrityError:
         raise HTTPException(409, "Organization already exists")
-    return {"id": org.id, "name": org.name, "api_key": org.api_key}
+    positions = import_job_postings(db, org.id, Path(__file__).resolve().parent.parent / "job_postings")
+    return {"id": org.id, "name": org.name, "api_key": org.api_key,
+            "positions": [{"id": p.id, "title": p.title} for p in positions]}
+
+
+@app.post("/admin/organizations/{org_id}/import-job-postings",
+          dependencies=[Depends(require_admin)])
+def admin_import_job_postings(org_id: int, db: Session = Depends(get_db)):
+    org = db.get(Organization, org_id)
+    if not org:
+        raise HTTPException(404, "Organization not found")
+    folder = Path(__file__).resolve().parent.parent / "job_postings"
+    positions = import_job_postings(db, org.id, folder)
+    return {    "positions": [{"id": p.id, "title": p.title} for p in positions]}
+
+
+@app.post("/admin/organizations/bootstrap", dependencies=[Depends(require_admin)])
+def admin_bootstrap_org(body: OrgCreate, db: Session = Depends(get_db)):
+    org = db.scalar(select(Organization).where(Organization.name == body.name))
+    if org is None:
+        org = create_organization(db, body.name)
+    positions = import_job_postings(db, org.id, Path(__file__).resolve().parent.parent / "job_postings")
+    return {"id": org.id, "name": org.name, "api_key": org.api_key,
+    "positions": [{"id": p.id, "title": p.title} for p in positions]}
 
 
 # ---------- positions ----------

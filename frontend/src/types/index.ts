@@ -178,6 +178,7 @@ export interface QueryLogItem {
 
 export type ActiveView = 
   | 'job-postings' 
+  | 'cv-uploader'
   | 'candidate-search' 
   | 'candidate-dossier' 
   | 'analytics-pipelines' 
@@ -189,6 +190,14 @@ export interface BackendPosition {
   title: string;
   description: string | null;
   custom_fields?: Array<{ name: string; description?: string }>;
+}
+
+export interface BackendUploadResult {
+  id?: number;
+  filename: string;
+  status: string;
+  duplicate?: boolean;
+  reason?: string;
 }
 
 export interface BackendCandidateBrief {
@@ -308,4 +317,3 @@ export interface BackendCVDossier {
     completion_tokens?: number;
   } | null;
 }
-

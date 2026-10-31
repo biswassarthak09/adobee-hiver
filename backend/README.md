@@ -26,6 +26,11 @@ Key endpoints (header `x-api-key`): `POST /positions`, `POST /positions/{id}/cvs
 `GET /positions/{id}/candidates`, `POST /positions/{id}/filter` (`{request, ids}`),
 `POST /positions/{id}/filter/reset`.
 
+When an organization is created through `POST /admin/organizations`, the text files in
+`job_postings/` are imported as positions automatically. To import them for an existing
+organization, use `POST /admin/organizations/{id}/import-job-postings` with the
+`x-admin-token` header.
+
 ## Recruiter filter agent
 The frontend keeps the list of candidate ids in play and sends it back with every request; the agent
 only narrows it. Reset = call without ids / `filter/reset`. See `cv_analyzer/recruiter_agent.py`.

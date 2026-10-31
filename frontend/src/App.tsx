@@ -8,6 +8,9 @@ import { CandidatePoolView } from './components/candidatePool/CandidatePoolView'
 import { DossierView } from './components/dossier/DossierView';
 import { AnalyticsView } from './components/analytics/AnalyticsView';
 import { SettingsView } from './components/settings/SettingsView';
+import { CVUploaderView } from './components/cvUploader/CVUploaderView';
+import { ensureOrganization } from './services/api';
+import { useEffect, useState } from 'react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +30,7 @@ const MainContent: React.FC = () => {
       <Sidebar />
       <main className="pl-64 pt-16">
         {currentView === 'job-postings' && <JobPostingsView />}
+        {currentView === 'cv-uploader' && <CVUploaderView />}
         {currentView === 'candidate-search' && <CandidatePoolView />}
         {currentView === 'candidate-dossier' && <DossierView />}
         {currentView === 'analytics-pipelines' && <AnalyticsView />}
@@ -37,10 +41,22 @@ const MainContent: React.FC = () => {
 };
 
 export const App: React.FC = () => {
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    ensureOrganization()
+      .catch((error) => console.error('Unable to initialize the organization:', error))
+      .finally(() => setAuthReady(true));
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <NavigationProvider>
-        <MainContent />
+        {authReady ? <MainContent /> : (
+          <div className="min-h-screen bg-background flex items-center justify-center text-on-surface">
+            Connecting to CV Analyzer...
+          </div>
+        )}
       </NavigationProvider>
     </QueryClientProvider>
   );

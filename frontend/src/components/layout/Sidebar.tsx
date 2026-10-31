@@ -14,6 +14,7 @@ export const Sidebar: React.FC = () => {
 
   const navItems: NavItem[] = [
     { id: 'job-postings', label: 'Job Postings', icon: 'work', badge: '18' },
+    { id: 'cv-uploader', label: 'Upload CVs', icon: 'upload_file' },
     { id: 'candidate-search', label: 'Candidate Search', icon: 'person_search', badge: 'AI' },
     { id: 'candidate-dossier', label: 'Candidate Dossier', icon: 'badge' },
     { id: 'analytics-pipelines', label: 'Analytics & Pipelines', icon: 'monitoring' },
