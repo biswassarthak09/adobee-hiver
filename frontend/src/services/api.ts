@@ -16,6 +16,7 @@ import {
   BackendCandidateBrief,
   BackendFilterResponse,
   BackendCVDossier
+  ,BackendUploadResult
 } from '../types';
 
 // API Configuration & Base URL
@@ -42,8 +43,7 @@ export const getAdminToken = (): string => {
 };
 
 export async function bootstrapOrganization(name = 'Adobee Hive'): Promise<string> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/organizations`, {
+  const res = await fetch(`${API_BASE_URL}/admin/organizations/bootstrap`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -51,17 +51,29 @@ export async function bootstrapOrganization(name = 'Adobee Hive'): Promise<strin
       },
       body: JSON.stringify({ name }),
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.api_key) {
-        setApiKey(data.api_key);
-        return data.api_key;
-      }
-    }
-  } catch {
-    // Graceful fallback to default key
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Organization bootstrap failed (${res.status}): ${errorText}`);
   }
-  return getApiKey();
+  const data = await res.json();
+  if (!data.api_key) {
+    throw new Error('Organization bootstrap returned no API key');
+  }
+  setApiKey(data.api_key);
+  return data.api_key;
+}
+
+export async function ensureOrganization(): Promise<void> {
+  const key = localStorage.getItem('hive_api_key');
+  if (key) {
+    const res = await fetch(`${API_BASE_URL}/positions`, {
+      headers: { 'x-api-key': key },
+    });
+    if (res.ok) {
+      return;
+    }
+  }
+  await bootstrapOrganization();
 }
 
 export async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -71,6 +83,7 @@ export async function fetchWithAuth<T>(endpoint: string, options: RequestInit = 
   if (!headers.has('x-api-key') && apiKey) {
     headers.set('x-api-key', apiKey);
   }
+
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
@@ -86,6 +99,15 @@ export async function fetchWithAuth<T>(endpoint: string, options: RequestInit = 
   }
 
   return res.json() as Promise<T>;
+}
+
+export async function uploadCVs(positionId: number, files: File[]): Promise<BackendUploadResult[]> {
+  const body = new FormData();
+  files.forEach((file) => body.append('files', file));
+  return fetchWithAuth<BackendUploadResult[]>(`/positions/${positionId}/cvs`, {
+    method: 'POST',
+    body,
+  });
 }
 
 // ==========================================

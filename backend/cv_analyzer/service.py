@@ -32,6 +32,33 @@ def create_position(s: Session, org_id: int, title: str, description: Optional[s
     return pos
 
 
+def import_job_postings(s: Session, org_id: int, folder: Path) -> list[Position]:
+    """Create positions from text job postings, skipping titles already imported."""
+    positions = []
+    for path in sorted(folder.glob("*.txt")):
+        description = path.read_text(encoding="utf-8-sig").strip()
+        if not description:
+            continue
+        title = next((line.strip() for line in description.splitlines() if line.strip()), path.stem)
+        existing = s.scalar(select(Position).where(Position.org_id == org_id,
+                                                   Position.title == title))
+        if existing is None:
+            existing = next((position for position in
+                             s.scalars(select(Position).where(Position.org_id == org_id)).all()
+                             if position.title.lstrip("\ufeff") == title), None)
+            if existing is not None and existing.title != title:
+                existing.title = title
+                s.commit()
+        if existing:
+            if existing.description != description:
+                existing.description = description
+                s.commit()
+            positions.append(existing)
+            continue
+        positions.append(create_position(s, org_id, title, description))
+    return positions
+
+
 # ---------- ingestion ----------
 def register_file(s: Session, org_id: int, position_id: Optional[int], src_path: str | Path,
                   original_filename: Optional[str] = None) -> tuple[CVDocument, bool]:
