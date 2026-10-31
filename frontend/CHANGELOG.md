@@ -2,6 +2,14 @@
 
 All notable changes, implementation tasks, and file updates for the Adobee Hive Talent Intelligence Platform are documented in this file.
 
+### [1.2.1] - 2026-11-01
+
+### Remote Branch Merge & Conflict Resolution (`JobPostingsView.tsx`, `api.ts`)
+- **Remote Integration**: Resolved Git merge conflict between local remediation branch and `origin/sb_hack`.
+- **`frontend/src/services/api.ts`**: Merged remote `createPosition` API endpoint (`POST /positions`) and `CreatePositionData` payload type while keeping zero-mock data integrity and proper error propagation.
+- **`frontend/src/components/jobPostings/JobPostingsView.tsx`**: Merged "Add Job Posting" modal form and React Query cache invalidation (`queryClient.invalidateQueries({ queryKey: ['requisitions'] })`) into the styled, responsive, zero-mock UI.
+- **Commit History**: Cleanly committed and merged (`897ba3d` and `c4ad3ef`).
+
 ## [1.2.0] - 2026-10-31
 
 ### Complete Frontend Remediation & Mock Data Elimination
