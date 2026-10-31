@@ -1,4 +1,4 @@
-﻿import os
+import os
 import shutil
 import tempfile
 from contextlib import asynccontextmanager
@@ -26,7 +26,17 @@ async def lifespan(_app):
     init_db()
     yield
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="CV Analyzer", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------- dependencies ----------
