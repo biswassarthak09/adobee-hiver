@@ -152,5 +152,17 @@ class CandidateSkill(Base):
     skill_type: Mapped[str] = mapped_column(String(30))  # technical|soft|tool|language|certification
 
 
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+    __table_args__ = (UniqueConstraint("org_id", "position_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    org_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
+    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id", ondelete="CASCADE"), index=True)
+    messages: Mapped[list] = mapped_column(JSON, default=list)
+    current_candidate_ids: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 def init_db():
     Base.metadata.create_all(engine)

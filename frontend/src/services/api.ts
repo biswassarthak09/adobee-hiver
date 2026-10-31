@@ -15,13 +15,23 @@ import {
   BackendPosition,
   BackendCandidateBrief,
   BackendFilterResponse,
-  BackendCVDossier
-  ,BackendUploadResult
+  BackendCVDossier,
+  BackendUploadResult,
+  ChatMessage,
+  ChatSession
 } from '../types';
 
 // API Configuration & Base URL
 const env = (import.meta as unknown as { env?: Record<string, string> }).env || {};
 const API_BASE_URL = env.VITE_API_URL || '/api';
+
+function numericPositionId(positionId: string | number): number {
+  const numericId = parseInt(String(positionId).replace(/\D/g, ''), 10);
+  if (!Number.isFinite(numericId)) {
+    throw new Error(`Invalid position ID: ${positionId}`);
+  }
+  return numericId;
+}
 
 // Helper for UI simulated delays in fallback mode
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -110,46 +120,98 @@ export async function uploadCVs(positionId: number, files: File[]): Promise<Back
   });
 }
 
+export async function fetchChatSessions(): Promise<ChatSession[]> {
+  const rows = await fetchWithAuth<Array<{
+    id: number;
+    position_id: number;
+    position_title: string;
+    created_at: string;
+    updated_at: string;
+    messages: ChatMessage[];
+    current_candidate_ids: number[];
+  }>>('/chat-sessions');
+  return rows.map((row) => ({
+    id: row.id,
+    positionId: String(row.position_id),
+    positionTitle: row.position_title,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    messages: row.messages || [],
+    currentCandidateIds: row.current_candidate_ids || [],
+  }));
+}
+
+export async function fetchChatSession(positionId: string | number): Promise<{
+  messages: ChatMessage[];
+  currentCandidateIds: number[];
+  candidates: BackendCandidateBrief[];
+}> {
+  const numericId = numericPositionId(positionId);
+  const row = await fetchWithAuth<{
+    messages: ChatMessage[];
+    current_candidate_ids: number[];
+    candidates: BackendCandidateBrief[];
+  }>(`/positions/${numericId}/chat-session`);
+  return {
+    messages: row.messages || [],
+    currentCandidateIds: row.current_candidate_ids || [],
+    candidates: row.candidates || [],
+  };
+}
+
+export async function saveChatSession(
+  positionId: string | number,
+  messages: ChatMessage[],
+  currentCandidateIds: number[]
+): Promise<void> {
+  const numericId = numericPositionId(positionId);
+  await fetchWithAuth(`/positions/${numericId}/chat-session`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      messages,
+      current_candidate_ids: currentCandidateIds,
+    }),
+  });
+}
+
 // ==========================================
 // Data Transformation Helpers
 // ==========================================
 
-function mapBackendPositionToRequisition(pos: BackendPosition, index: number): Requisition {
-  const deptList: Exclude<Department, 'All Departments'>[] = [
-    'Engineering', 'Data & AI', 'Product & Design', 'Sales & Marketing'
-  ];
-  const dept = deptList[index % deptList.length];
+function mapBackendPositionToRequisition(pos: BackendPosition): Requisition {
+  const statusCounts = pos.status_counts || {};
+  const applicantCount = pos.applicants_count || 0;
+  const completedCount = statusCounts.done || 0;
+  const pendingCount = (statusCounts.pending || 0) + (statusCounts.processing || 0);
 
   return {
     id: String(pos.id),
-    reqCode: `AH-${(pos.id + 2040).toString()}`,
+    reqCode: `POS-${pos.id}`,
     title: pos.title,
-    department: dept,
-    location: 'San Francisco, CA (Hybrid)',
-    salaryBand: '$180k - $240k',
-    equity: '0.12% - 0.25%',
+    department: 'Engineering',
+    location: 'Not specified',
+    salaryBand: 'Not specified',
+    equity: 'Not specified',
     status: 'Active',
-    priorityLabel: 'High Priority',
-    aiCohortFit: 94 + (pos.id % 5),
-    summary: pos.description || 'Enterprise position monitored by Adobee Hive talent neural matcher.',
-    skills: pos.custom_fields && pos.custom_fields.length > 0
-      ? pos.custom_fields.map((c) => c.name)
-      : ['Python', 'System Architecture', 'LLM / RAG', 'Distributed Systems'],
+    priorityLabel: pendingCount > 0 ? 'Processing' : 'Active',
+    aiCohortFit: completedCount > 0 ? 100 : 0,
+    summary: pos.description || 'No job description provided.',
+    skills: pos.custom_fields?.map((c) => c.name) || [],
     hiringLead: {
-      name: 'Sarah Jenkins',
-      role: 'Staff Talent Lead',
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      poolsCount: 4,
+      name: 'Unassigned',
+      role: 'Hiring team',
+      avatarUrl: '',
+      poolsCount: 0,
     },
-    applicantsCount: 18 + pos.id * 4,
-    unreviewedCount: 4,
+    applicantsCount: applicantCount,
+    unreviewedCount: pendingCount,
     pipeline: {
-      review: 12,
-      aiScreened: 8,
-      techRound: 4,
-      offerStage: 1,
+      review: statusCounts.pending || 0,
+      aiScreened: completedCount,
+      techRound: 0,
+      offerStage: 0,
     },
-    funnelVelocityPercent: 92,
+    funnelVelocityPercent: applicantCount > 0 ? Math.round((completedCount / applicantCount) * 100) : 0,
   };
 }
 
@@ -164,9 +226,9 @@ const AVATAR_URLS = [
 export function mapBackendCandidateToCandidate(
   brief: BackendCandidateBrief,
   requisitionId: string,
-  index = 0
+  _index = 0
 ): Candidate {
-  const avatarUrl = AVATAR_URLS[index % AVATAR_URLS.length];
+  const avatarUrl = AVATAR_URLS[Math.abs(brief.id) % AVATAR_URLS.length];
   const experienceYears = brief.total_years_experience || 4;
   const fitScore = Math.min(99, Math.max(72, Math.round(82 + experienceYears * 2)));
 
@@ -316,15 +378,14 @@ export function useRequisition(id: string) {
           const positions = await fetchWithAuth<BackendPosition[]>('/positions');
           const found = positions.find((p) => p.id === numericId);
           if (found) {
-            return mapBackendPositionToRequisition(found, 0);
+            return mapBackendPositionToRequisition(found);
           }
         } catch {
           // fallback
         }
       }
 
-      await delay(80);
-      return mockRequisitions.find((r) => r.id === id) || mockRequisitions[0];
+      return undefined;
     },
   });
 }
@@ -342,50 +403,37 @@ export function useCandidates(
           const res = await fetchWithAuth<{ ids: number[]; count: number; candidates: BackendCandidateBrief[] }>(
             `/positions/${numericId}/candidates`
           );
-          if (res?.candidates && res.candidates.length > 0) {
-            return res.candidates.map((brief, i) =>
-              mapBackendCandidateToCandidate(brief, requisitionId, i)
-            );
-          }
+          return (res?.candidates || []).map((brief, i) =>
+            mapBackendCandidateToCandidate(brief, requisitionId, i)
+          );
         } catch {
-          // fallback
+          return [];
         }
       }
+      return [];
+    },
+  });
+}
 
-      await delay(150);
-      let list = mockCandidates.filter((c) => c.requisitionId === requisitionId);
-      if (list.length === 0) {
-        list = [...mockCandidates];
-      }
+export interface BackendCVStatus {
+  id: number;
+  filename: string;
+  position_id: number | null;
+  status: string;
+  error: string | null;
+  full_name: string | null;
+}
 
-      if (filterTokens.length > 0) {
-        list = list.filter((candidate) => {
-          return filterTokens.every((token) => {
-            const t = token.toLowerCase();
-            if (t.includes('5+ yrs') || t.includes('experience')) {
-              return candidate.experienceYears >= 5;
-            }
-            if (t.includes('rag') || t.includes('llm')) {
-              return candidate.skills.some((s) => /rag|llm|langchain|pytorch|vector/i.test(s));
-            }
-            if (t.includes('sf') || t.includes('hybrid')) {
-              return /sf|san francisco/i.test(candidate.location);
-            }
-            if (t.includes('85%') || t.includes('match')) {
-              return candidate.fitScore >= 85;
-            }
-            if (t.includes('founders')) {
-              return candidate.currentCompany.includes('ex-') || candidate.fitScore > 90;
-            }
-            if (t.includes('notice')) {
-              return candidate.noticePeriod.includes('2 weeks') || candidate.noticePeriod.includes('Immediate');
-            }
-            return true;
-          });
-        });
-      }
-
-      return list.sort((a, b) => b.fitScore - a.fitScore);
+export function useCVStatuses(positionId?: number) {
+  return useQuery({
+    queryKey: ['cv-statuses', positionId],
+    queryFn: () => fetchWithAuth<BackendCVStatus[]>(`/cvs?position_id=${positionId}`),
+    enabled: Boolean(positionId),
+    refetchInterval: (query) => {
+      const statuses = query.state.data || [];
+      return statuses.some((cv) => cv.status === 'pending' || cv.status === 'processing')
+        ? 3000
+        : false;
     },
   });
 }

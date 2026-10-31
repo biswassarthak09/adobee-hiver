@@ -18,8 +18,8 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 
 export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentView, setCurrentView] = useState<ActiveView>('job-postings');
-  const [selectedRequisitionId, setSelectedRequisitionId] = useState<string>('req-ah-2049');
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('cand-elena');
+  const [selectedRequisitionId, setSelectedRequisitionId] = useState<string>('');
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
   const [globalSearchQuery, setGlobalSearchQuery] = useState<string>('');
 
   const openCandidateDossier = (candidateId: string) => {

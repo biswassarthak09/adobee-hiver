@@ -9,6 +9,7 @@ import { DossierView } from './components/dossier/DossierView';
 import { AnalyticsView } from './components/analytics/AnalyticsView';
 import { SettingsView } from './components/settings/SettingsView';
 import { CVUploaderView } from './components/cvUploader/CVUploaderView';
+import { ChatSessionsView } from './components/chatSessions/ChatSessionsView';
 import { ensureOrganization } from './services/api';
 import { useEffect, useState } from 'react';
 
@@ -33,6 +34,7 @@ const MainContent: React.FC = () => {
         {currentView === 'cv-uploader' && <CVUploaderView />}
         {currentView === 'candidate-search' && <CandidatePoolView />}
         {currentView === 'candidate-dossier' && <DossierView />}
+        {currentView === 'chat-sessions' && <ChatSessionsView />}
         {currentView === 'analytics-pipelines' && <AnalyticsView />}
         {currentView === 'settings-team' && <SettingsView />}
       </main>

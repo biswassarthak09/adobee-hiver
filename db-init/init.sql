@@ -101,3 +101,17 @@ CREATE TABLE candidate_skills (
 
 CREATE INDEX ix_candidate_skills_profile_id ON candidate_skills (profile_id);
 CREATE INDEX ix_skill_org_name ON candidate_skills (org_id, skill_normalized);
+
+CREATE TABLE chat_sessions (
+    id SERIAL PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    position_id INTEGER NOT NULL REFERENCES positions(id) ON DELETE CASCADE,
+    messages JSON NOT NULL DEFAULT '[]'::json,
+    current_candidate_ids JSON NOT NULL DEFAULT '[]'::json,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_chat_sessions_org_position UNIQUE (org_id, position_id)
+);
+
+CREATE INDEX ix_chat_sessions_org_id ON chat_sessions (org_id);
+CREATE INDEX ix_chat_sessions_position_id ON chat_sessions (position_id);

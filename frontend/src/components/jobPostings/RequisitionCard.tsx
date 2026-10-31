@@ -74,11 +74,17 @@ export const RequisitionCard: React.FC<RequisitionCardProps> = ({
           {/* Hiring Lead Card */}
           <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-4 min-w-[280px] bg-surface-container-lowest p-4 rounded-xl border border-white/5 shadow-inner">
             <div className="flex items-center gap-3 w-full">
-              <img
-                src={requisition.hiringLead.avatarUrl}
-                alt={requisition.hiringLead.name}
-                className="w-10 h-10 rounded-full object-cover shadow-sm ring-1 ring-primary/30"
-              />
+              {requisition.hiringLead.avatarUrl ? (
+                <img
+                  src={requisition.hiringLead.avatarUrl}
+                  alt={requisition.hiringLead.name}
+                  className="w-10 h-10 rounded-full object-cover shadow-sm ring-1 ring-primary/30"
+                />
+              ) : (
+                <span className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center">
+                  <span className="material-symbols-outlined text-on-surface-variant">person</span>
+                </span>
+              )}
               <div className="flex flex-col min-w-0">
                 <span className="font-mono text-[10px] text-on-surface-variant uppercase tracking-wider">
                   Hiring Lead

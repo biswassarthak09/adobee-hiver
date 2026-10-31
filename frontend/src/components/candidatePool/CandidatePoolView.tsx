@@ -1,24 +1,25 @@
 import React, { useState } from 'react';
-import { useCandidates, useRequisition } from '../../services/api';
+import { mapBackendCandidateToCandidate, useCandidates, useRequisition } from '../../services/api';
 import { useNavigation } from '../../context/NavigationContext';
 import { CopilotChat } from './CopilotChat';
 import { CandidateCard } from './CandidateCard';
+import { BackendCandidateBrief } from '../../types';
 
 export const CandidatePoolView: React.FC = () => {
   const { selectedRequisitionId, setCurrentView } = useNavigation();
   const { data: requisition } = useRequisition(selectedRequisitionId);
 
-  const [activeTokens, setActiveTokens] = useState<string[]>([
-    'Exp: 5+ yrs Python/TS',
-    'Domain: RAG / LLM',
-    'Location: SF Hybrid',
-    'Match > 85%',
-  ]);
+  const [activeTokens, setActiveTokens] = useState<string[]>([]);
+  const [filteredCandidates, setFilteredCandidates] = useState<BackendCandidateBrief[] | null>(null);
 
   const { data: candidates = [], isLoading } = useCandidates(
     selectedRequisitionId,
     activeTokens
   );
+  const visibleCandidates = filteredCandidates
+    ? filteredCandidates.map((candidate, index) =>
+        mapBackendCandidateToCandidate(candidate, selectedRequisitionId, index))
+    : candidates;
 
   const handleAddToken = (token: string) => {
     if (!activeTokens.includes(token)) {
@@ -32,10 +33,10 @@ export const CandidatePoolView: React.FC = () => {
 
   const handleResetTokens = () => {
     setActiveTokens([]);
+    setFilteredCandidates(null);
   };
 
-  const heroCandidate = candidates[0];
-  const otherCandidates = candidates.slice(1);
+  const heroCandidate = visibleCandidates[0];
 
   return (
     <div className="w-full h-screen pt-16 flex flex-col overflow-hidden bg-background">
@@ -53,7 +54,7 @@ export const CandidatePoolView: React.FC = () => {
               </button>
               <span>/</span>
               <span className="text-on-surface-variant font-semibold">
-                REQ #{requisition?.reqCode || 'AH-2049'}
+                {requisition?.reqCode || 'Position'}
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-tertiary" />
               <span className="text-tertiary font-semibold">Active Intake</span>
@@ -61,28 +62,28 @@ export const CandidatePoolView: React.FC = () => {
 
             <div className="flex flex-wrap items-center gap-3 mt-1">
               <h1 className="font-headline text-xl sm:text-2xl text-on-surface font-bold tracking-tight">
-                {requisition?.title || 'Lead Full-Stack AI Engineer'}
+                {requisition?.title || 'Selected position'}
               </h1>
               <div className="bg-surface-container-high px-2 py-0.5 rounded text-on-surface-variant font-mono text-xs flex items-center gap-1 border border-white/5">
                 <span className="material-symbols-outlined text-[14px] text-primary">location_on</span>
-                {requisition?.location || 'San Francisco, CA (Hybrid)'}
+                {requisition?.location || 'Location not specified'}
               </div>
               <div className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded font-mono text-xs font-semibold">
-                Engineering • L6 / Staff
+                {requisition?.department || 'Department not specified'}
               </div>
             </div>
 
             <div className="flex items-center gap-3 mt-1 text-xs text-on-surface-variant">
               <span>
-                Target: <strong className="text-on-surface font-mono">{requisition?.salaryBand || '$180k - $230k'}</strong>
+                Target: <strong className="text-on-surface font-mono">{requisition?.salaryBand || 'Not specified'}</strong>
               </span>
               <span>•</span>
               <span>
-                Hiring Lead: <strong className="text-on-surface font-semibold">{requisition?.hiringLead.name || 'Sarah Jenkins'}</strong>
+                Hiring Lead: <strong className="text-on-surface font-semibold">{requisition?.hiringLead.name || 'Unassigned'}</strong>
               </span>
               <span>•</span>
               <span>
-                Posted: <span className="font-mono">6 days ago</span>
+                Posted: <span className="font-mono">Not specified</span>
               </span>
             </div>
           </div>
@@ -92,7 +93,7 @@ export const CandidatePoolView: React.FC = () => {
             <div className="bg-surface-container px-3 py-1.5 rounded-lg flex items-center gap-2 border border-white/5 shadow-inner">
               <span className="material-symbols-outlined text-primary text-[18px]">group</span>
               <span className="font-mono text-sm text-on-surface font-bold">
-                {requisition?.applicantsCount || 48}
+                {requisition?.applicantsCount || 0}
               </span>
               <span className="text-xs text-on-surface-variant">Total Applicants</span>
             </div>
@@ -123,6 +124,8 @@ export const CandidatePoolView: React.FC = () => {
             onAddToken={handleAddToken}
             onRemoveToken={handleRemoveToken}
             onResetTokens={handleResetTokens}
+            onFilterResult={setFilteredCandidates}
+            positionTitle={requisition?.title || ''}
           />
         </div>
 
@@ -135,10 +138,10 @@ export const CandidatePoolView: React.FC = () => {
                 Filtered Pool
               </span>
               <span className="bg-primary/20 text-primary font-mono text-xs font-bold px-2 py-0.5 rounded border border-primary/30">
-                {candidates.length} Candidates
+                {visibleCandidates.length} Candidates
               </span>
               <span className="text-on-surface-variant text-xs hidden sm:inline">
-                from 48 total applications
+                from {requisition?.applicantsCount || 0} total applications
               </span>
             </div>
 
@@ -159,7 +162,7 @@ export const CandidatePoolView: React.FC = () => {
                 Synthesizing semantic embeddings...
               </span>
             </div>
-          ) : candidates.length === 0 ? (
+          ) : visibleCandidates.length === 0 ? (
             <div className="bg-surface-container-low rounded-xl p-8 text-center space-y-3 border border-white/5">
               <span className="material-symbols-outlined text-4xl text-on-surface-variant">
                 person_search
@@ -182,7 +185,7 @@ export const CandidatePoolView: React.FC = () => {
               )}
 
               {/* Remaining Candidate Roster Cards */}
-              {otherCandidates.map((candidate) => (
+              {visibleCandidates.slice(1).map((candidate) => (
                 <CandidateCard key={candidate.id} candidate={candidate} />
               ))}
             </div>

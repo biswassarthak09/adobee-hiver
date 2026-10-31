@@ -10,12 +10,8 @@ export const DepartmentTabs: React.FC<DepartmentTabsProps> = ({
   selectedDepartment,
   onSelectDepartment,
 }) => {
-  const departments: { id: Department; label: string; count: number }[] = [
-    { id: 'All Departments', label: 'All Departments', count: 18 },
-    { id: 'Engineering', label: 'Engineering', count: 8 },
-    { id: 'Product & Design', label: 'Product & Design', count: 4 },
-    { id: 'Sales & Marketing', label: 'Sales & Marketing', count: 3 },
-    { id: 'Data & AI', label: 'Data & AI', count: 3 },
+  const departments: { id: Department; label: string }[] = [
+    { id: 'All Departments', label: 'All Departments' },
   ];
 
   return (
@@ -32,7 +28,7 @@ export const DepartmentTabs: React.FC<DepartmentTabsProps> = ({
                 : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface hover:bg-surface-bright'
             }`}
           >
-            {dept.label} ({dept.count})
+            {dept.label}
           </button>
         );
       })}
