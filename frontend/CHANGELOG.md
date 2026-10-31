@@ -4,6 +4,10 @@ All notable changes, implementation tasks, and file updates for the Adobee Hive 
 
 ### [1.2.1] - 2026-11-01
 
+### Docker Compose & Environment Configuration (`.env`)
+- **Root `.env` Configuration**: Populated root `.env` with required PostgreSQL variables (`POSTGRES_USER=postgres`, `POSTGRES_PASSWORD=postgres`, `POSTGRES_DB=hr_database`) resolving the interpolation failure during `docker compose up --build`.
+- **Interpolation Verified**: Confirmed configuration via `docker compose config` with `DATABASE_URL` resolved to `postgresql+psycopg://postgres:postgres@db:5432/hr_database`.
+
 ### Remote Branch Merge & Conflict Resolution (`JobPostingsView.tsx`, `api.ts`)
 - **Remote Integration**: Resolved Git merge conflict between local remediation branch and `origin/sb_hack`.
 - **`frontend/src/services/api.ts`**: Merged remote `createPosition` API endpoint (`POST /positions`) and `CreatePositionData` payload type while keeping zero-mock data integrity and proper error propagation.
