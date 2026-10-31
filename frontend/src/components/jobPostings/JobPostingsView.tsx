@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useRequisitions } from '../../services/api';
+import { createPosition, useRequisitions } from '../../services/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { Department, RequisitionStatus } from '../../types';
 import { DepartmentTabs } from './DepartmentTabs';
 import { RequisitionCard } from './RequisitionCard';
@@ -10,9 +11,15 @@ export const JobPostingsView: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<RequisitionStatus | 'All'>('All');
   const [searchInput, setSearchInput] = useState('');
   const { globalSearchQuery, selectedRequisitionId, setSelectedRequisitionId } = useNavigation();
+  const queryClient = useQueryClient();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const effectiveSearch = searchInput || globalSearchQuery;
-  const { data: requisitions = [], isLoading } = useRequisitions(
+  const { data: requisitions = [], isLoading, isError } = useRequisitions(
     selectedDept,
     selectedStatus,
     effectiveSearch
@@ -25,6 +32,27 @@ export const JobPostingsView: React.FC = () => {
       setSelectedRequisitionId(requisitions[0].id);
     }
   }, [requisitions, selectedRequisitionId, setSelectedRequisitionId]);
+
+  const submitPosition = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newTitle.trim()) {
+      setCreateError('Enter a job title.');
+      return;
+    }
+    setCreating(true);
+    setCreateError('');
+    try {
+      await createPosition(newTitle.trim(), newDescription.trim());
+      await queryClient.invalidateQueries({ queryKey: ['requisitions'] });
+      setNewTitle('');
+      setNewDescription('');
+      setShowCreateForm(false);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : 'Unable to create job posting.');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="w-full min-h-screen bg-background px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -40,10 +68,39 @@ export const JobPostingsView: React.FC = () => {
                 Requisition Orchestration
               </span>
               <span className="inline-flex items-center gap-1.5 font-mono text-xs text-tertiary">
-                <span className="w-2 h-2 rounded-full bg-tertiary animate-ping" />
-                Sync Active: 14 Nodes
+                <span className="w-2 h-2 rounded-full bg-tertiary" />
+                Sync Active
               </span>
             </div>
+
+            {showCreateForm && (
+              <div className="relative z-10 mt-6">
+                <form onSubmit={submitPosition} className="max-w-2xl bg-surface-container-lowest rounded-xl p-4 border border-white/5 space-y-3 shadow-xl">
+                  <input
+                    value={newTitle}
+                    onChange={(event) => setNewTitle(event.target.value)}
+                    placeholder="Job title (e.g. Senior Machine Learning Engineer)"
+                    className="w-full bg-surface-container text-on-surface px-3 py-2 rounded-lg border border-white/10 text-sm focus:outline-none focus:border-primary"
+                  />
+                  <textarea
+                    value={newDescription}
+                    onChange={(event) => setNewDescription(event.target.value)}
+                    placeholder="Paste the job description and key technical requirements..."
+                    rows={6}
+                    className="w-full bg-surface-container text-on-surface px-3 py-2 rounded-lg border border-white/10 text-sm resize-y focus:outline-none focus:border-primary"
+                  />
+                  {createError && <p className="text-xs text-error">{createError}</p>}
+                  <button
+                    type="submit"
+                    disabled={creating}
+                    className="bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-amber-400 transition-all shadow"
+                  >
+                    {creating ? 'Creating...' : 'Create Job Posting'}
+                  </button>
+                </form>
+              </div>
+            )}
+
             <h1 className="font-headline text-2xl sm:text-3xl text-on-surface font-bold tracking-tight">
               Active Job Postings & Requisitions
             </h1>
@@ -51,6 +108,13 @@ export const JobPostingsView: React.FC = () => {
               Algorithmic sourcing, real-time candidate triage, and predictive conversion vectors across active organizational cohorts.
             </p>
           </div>
+
+          <button
+            onClick={() => setShowCreateForm((open) => !open)}
+            className="self-start xl:self-center bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg hover:bg-amber-400 transition-all shadow"
+          >
+            {showCreateForm ? 'Close' : 'Add Job Posting'}
+          </button>
 
           {/* Summary Pill Matrix & Sync Status */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
@@ -86,6 +150,12 @@ export const JobPostingsView: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {isError && (
+              <div className="bg-error/10 border border-error/30 text-error rounded-xl px-4 py-3 text-xs font-mono">
+                Unable to load job postings from backend. Check API connection and reload.
+              </div>
+            )}
 
             <div className="inline-flex items-center justify-center gap-2 bg-surface-container-high text-on-surface font-mono text-xs px-4 py-3 rounded-lg border border-white/10 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
@@ -165,8 +235,18 @@ export const JobPostingsView: React.FC = () => {
         <div className="py-20 flex flex-col items-center justify-center space-y-3">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <span className="font-mono text-xs text-on-surface-variant">
-            Synchronizing telemetry across 14 clusters...
+            Loading requisitions from server...
           </span>
+        </div>
+      ) : requisitions.length === 0 ? (
+        <div className="py-20 flex flex-col items-center justify-center text-center space-y-3 bg-surface-container-low/40 rounded-xl border border-white/5 p-8">
+          <span className="material-symbols-outlined text-4xl text-on-surface-variant">work_off</span>
+          <h3 className="font-headline text-base font-semibold text-on-surface">No requisitions found</h3>
+          <p className="text-xs text-on-surface-variant max-w-sm">
+            {effectiveSearch
+              ? `No open positions match "${effectiveSearch}". Try adjusting your filters.`
+              : 'No positions are currently available from the server.'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-6">

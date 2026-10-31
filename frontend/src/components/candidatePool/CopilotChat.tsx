@@ -166,12 +166,6 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
           >
             <span className="material-symbols-outlined text-[18px]">refresh</span>
           </button>
-          <button
-            className="p-1 rounded hover:text-on-surface hover:bg-surface-container-high transition-colors"
-            title="Tuning Parameters"
-          >
-            <span className="material-symbols-outlined text-[18px]">tune</span>
-          </button>
         </div>
       </div>
 
@@ -185,7 +179,7 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
             }`}
           >
             <div className="flex items-center gap-1.5 text-on-surface-variant font-mono text-[10px] uppercase">
-              <span>{msg.sender === 'recruiter' ? 'Sarah Jenkins' : 'Hive Neural Matcher'}</span>
+              <span>{msg.sender === 'recruiter' ? 'Recruiter' : 'Hive Neural Matcher'}</span>
               <span>•</span>
               <span>{msg.timestamp}</span>
             </div>
@@ -293,21 +287,7 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
 
           <div className="flex items-center justify-between pt-1 px-1">
             <div className="flex items-center gap-1 text-on-surface-variant">
-              <button
-                type="button"
-                className="p-1 hover:text-on-surface hover:bg-surface-container-high rounded"
-                title="Attach requisition benchmark"
-              >
-                <span className="material-symbols-outlined text-[18px]">attachment</span>
-              </button>
-              <button
-                type="button"
-                className="p-1 hover:text-on-surface hover:bg-surface-container-high rounded"
-                title="Strict vector threshold switch"
-              >
-                <span className="material-symbols-outlined text-[18px]">tune</span>
-              </button>
-              <span className="font-mono text-[10px] text-on-surface-variant/70 ml-1">
+              <span className="font-mono text-[10px] text-on-surface-variant/70">
                 Context: {positionTitle || 'Selected position'}
               </span>
             </div>

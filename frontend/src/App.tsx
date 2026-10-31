@@ -1,6 +1,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
+import { ToastProvider } from './context/ToastContext';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { JobPostingsView } from './components/jobPostings/JobPostingsView';
@@ -29,7 +30,7 @@ const MainContent: React.FC = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <Sidebar />
-      <main className="pl-64 pt-16">
+      <main className="lg:pl-64 pl-0 pt-16">
         {currentView === 'job-postings' && <JobPostingsView />}
         {currentView === 'cv-uploader' && <CVUploaderView />}
         {currentView === 'candidate-search' && <CandidatePoolView />}
@@ -54,11 +55,13 @@ export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <NavigationProvider>
-        {authReady ? <MainContent /> : (
-          <div className="min-h-screen bg-background flex items-center justify-center text-on-surface">
-            Connecting to CV Analyzer...
-          </div>
-        )}
+        <ToastProvider>
+          {authReady ? <MainContent /> : (
+            <div className="min-h-screen bg-background flex items-center justify-center text-on-surface">
+              Connecting to CV Analyzer...
+            </div>
+          )}
+        </ToastProvider>
       </NavigationProvider>
     </QueryClientProvider>
   );

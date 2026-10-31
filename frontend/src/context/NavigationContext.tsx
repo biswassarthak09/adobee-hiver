@@ -12,6 +12,8 @@ interface NavigationContextType {
   setGlobalSearchQuery: (query: string) => void;
   openCandidateDossier: (candidateId: string) => void;
   openApplicantPool: (requisitionId: string) => void;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
@@ -21,6 +23,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [selectedRequisitionId, setSelectedRequisitionId] = useState<string>('');
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
   const [globalSearchQuery, setGlobalSearchQuery] = useState<string>('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   const openCandidateDossier = (candidateId: string) => {
     setSelectedCandidateId(candidateId);
@@ -45,6 +48,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setGlobalSearchQuery,
         openCandidateDossier,
         openApplicantPool,
+        isMobileMenuOpen,
+        setIsMobileMenuOpen,
       }}
     >
       {children}

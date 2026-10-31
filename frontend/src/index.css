@@ -3,11 +3,71 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-background: 248 250 252;
+    --color-surface: 255 255 255;
+    --color-surface-dim: 241 245 249;
+    --color-surface-bright: 255 255 255;
+    --color-surface-container-lowest: 255 255 255;
+    --color-surface-container-low: 248 250 252;
+    --color-surface-container: 241 245 249;
+    --color-surface-container-high: 226 232 240;
+    --color-surface-container-highest: 203 213 225;
+    --color-on-surface: 15 23 42;
+    --color-on-surface-variant: 100 116 139;
+    --color-on-background: 15 23 42;
+    --color-outline: 203 213 225;
+    --color-outline-variant: 226 232 240;
+
+    --color-primary: 217 119 6;
+    --color-primary-container: 254 243 199;
+    --color-on-primary: 255 255 255;
+    --color-on-primary-container: 120 53 15;
+
+    --color-secondary: 2 132 199;
+    --color-secondary-container: 224 242 254;
+    --color-on-secondary: 255 255 255;
+
+    --color-tertiary: 5 150 105;
+    --color-tertiary-container: 209 250 229;
+    --color-on-tertiary: 255 255 255;
+  }
+
+  .dark {
+    --color-background: 9 13 22;
+    --color-surface: 15 19 28;
+    --color-surface-dim: 15 19 28;
+    --color-surface-bright: 53 57 67;
+    --color-surface-container-lowest: 10 14 23;
+    --color-surface-container-low: 24 27 37;
+    --color-surface-container: 28 31 41;
+    --color-surface-container-high: 38 42 52;
+    --color-surface-container-highest: 49 53 63;
+    --color-on-surface: 223 226 239;
+    --color-on-surface-variant: 148 163 184;
+    --color-on-background: 223 226 239;
+    --color-outline: 71 85 105;
+    --color-outline-variant: 51 65 85;
+
+    --color-primary: 245 158 11;
+    --color-primary-container: 245 158 11;
+    --color-on-primary: 9 13 22;
+    --color-on-primary-container: 69 26 3;
+
+    --color-secondary: 56 189 248;
+    --color-secondary-container: 2 132 199;
+    --color-on-secondary: 8 47 73;
+
+    --color-tertiary: 16 185 129;
+    --color-tertiary-container: 5 150 105;
+    --color-on-tertiary: 2 44 34;
+  }
+
   html, body {
     margin: 0;
     padding: 0;
-    background-color: #090d16;
-    color: #dfe2ef;
+    background-color: rgb(var(--color-background));
+    color: rgb(var(--color-on-surface));
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
@@ -17,14 +77,14 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #0f131c;
+    background: rgb(var(--color-surface));
   }
   ::-webkit-scrollbar-thumb {
-    background: #262a34;
+    background: rgb(var(--color-surface-container-high));
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #31353f;
+    background: rgb(var(--color-surface-container-highest));
   }
 }
 

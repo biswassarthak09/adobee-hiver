@@ -33,7 +33,7 @@ describe('Adobee Hive Recruitment Portal App', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Hive AI Co-pilot/i)).toBeInTheDocument();
-      expect(screen.getAllByText(/Dr. Elena Rostova/i)[0]).toBeInTheDocument();
+      expect(screen.getByText(/Filtered Pool/i)).toBeInTheDocument();
     });
   });
 });

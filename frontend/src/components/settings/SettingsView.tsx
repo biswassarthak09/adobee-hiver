@@ -142,16 +142,16 @@ export const SettingsView: React.FC = () => {
                 Connected ATS Platforms
               </h2>
             </div>
-            <span className="font-mono text-xs text-tertiary bg-tertiary/10 px-2 py-0.5 rounded font-semibold">
-              3 Active Webhooks
+            <span className="font-mono text-xs text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded font-semibold">
+              Roadmap Preview
             </span>
           </div>
 
           <div className="space-y-3">
             {[
-              { name: 'Greenhouse Recruiting', status: 'Live Sync (v4.2)', id: '#GH-77821', active: true },
-              { name: 'Checkr Background Verification', status: 'Tier 1 Clean Clearance', id: '#CHK-8810', active: true },
-              { name: 'The Work Number (Equifax)', status: 'Automated Tenure Validation', id: '#TWN-902', active: true },
+              { name: 'Greenhouse Recruiting', status: 'ATS Sync Connector', id: 'Roadmap v2.0' },
+              { name: 'Checkr Background Verification', status: 'Background Clearance Verification', id: 'Roadmap v2.0' },
+              { name: 'The Work Number (Equifax)', status: 'Tenure & Employment History API', id: 'Roadmap v2.1' },
             ].map((integ) => (
               <div
                 key={integ.name}
@@ -163,7 +163,9 @@ export const SettingsView: React.FC = () => {
                     {integ.status} • {integ.id}
                   </div>
                 </div>
-                <span className="w-2.5 h-2.5 rounded-full bg-tertiary animate-pulse" />
+                <span className="font-mono text-[10px] text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded border border-white/5">
+                  Upcoming
+                </span>
               </div>
             ))}
           </div>

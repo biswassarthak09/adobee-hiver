@@ -2,6 +2,45 @@
 
 All notable changes, implementation tasks, and file updates for the Adobee Hive Talent Intelligence Platform are documented in this file.
 
+## [1.2.0] - 2026-10-31
+
+### Complete Frontend Remediation & Mock Data Elimination
+- **Mock Data Elimination & API Layer Overhaul (`frontend/src/services/api.ts`)**:
+  - Severed all imports and fallback paths to `mockData.ts` (`mockRequisitions`, `mockCandidates`, `mockFunnelStages`, etc.).
+  - `useRequisitions`: Returns real data from backend `/positions` or an empty array `[]` on error/unseeded database (no mock fallback roles).
+  - `useCandidate`: Direct fetch from `/cvs/{numericId}`, returning `Candidate | undefined` (no mock fallback to `mockCandidates[0]`).
+  - `useAdvanceCandidateStage`: Stage updates persist in client `localStorage` under `hive_stage_overrides` instead of mutating in-memory mock objects.
+  - `useAnalytics`: Live aggregation of metrics from `/positions` (total pipeline, processed candidates, pending analysis) instead of hardcoded numbers.
+  - `mapBackendCandidateToCandidate`: Mapped real fields (`brief.companies?.[0]`, `brief.highest_education_level`, `'Not specified'` for missing fields) instead of fabricated values (`'$190k - $220k'`, `'Verified Enterprise'`).
+- **Non-Blocking Toast System (`frontend/src/context/ToastContext.tsx`, `App.tsx`)**:
+  - Implemented lightweight, non-blocking toast notification provider supporting `'info'`, `'success'`, `'error'`, and `'warning'` alerts with automatic dismiss.
+  - Replaced all 8 native browser `alert()` modal calls across `DossierView.tsx`, `CandidateCard.tsx`, `CandidatePoolView.tsx`, and `AnalyticsView.tsx`.
+- **CSS Variable Theme Engine & Light/Dark Switcher (`tailwind.config.js`, `src/index.css`, `Header.tsx`)**:
+  - Converted Tailwind color tokens (`primary`, `secondary`, `tertiary`, `surface-*`, `background`, etc.) to use CSS variables with alpha-channel support: `rgb(var(--color-...) / <alpha-value>)`.
+  - Added full light-mode and dark-mode color variable tokens to `src/index.css` (`:root` for light mode and `.dark` for Obsidian dark mode).
+  - Added theme toggle button to `Header.tsx` with `localStorage` persistence and automatic class toggle on `document.documentElement`.
+- **Mobile Responsive Drawer Layout (`Header.tsx`, `Sidebar.tsx`, `NavigationContext.tsx`, `App.tsx`)**:
+  - Added mobile menu state (`isMobileMenuOpen`, `setIsMobileMenuOpen`) in `NavigationContext`.
+  - Added hamburger toggle button in `Header.tsx` on viewports `< lg`.
+  - Converted `Sidebar.tsx` into a responsive slide-out drawer on small screens with backdrop overlay and auto-closing on navigation.
+  - Dynamically wired `Job Postings` badge count in `Sidebar.tsx` to `useRequisitions()`.
+  - Made main container padding responsive (`lg:pl-64 pl-0`).
+- **Component Decomposition & Modularization (`src/components/dossier/`, `src/components/analytics/`)**:
+  - Decomposed monolithic `DossierView.tsx` (593 lines) into 6 isolated components: `ApplicantPoolRail.tsx`, `CandidateHeaderBanner.tsx`, `TelemetryScorecards.tsx`, `CodeAuditCard.tsx`, `EmploymentTimeline.tsx`, and `DossierNotes.tsx`.
+  - Decomposed monolithic `AnalyticsView.tsx` (526 lines) into 5 focused components: `KpiSummaryGrid.tsx`, `FunnelProgression.tsx`, `DepartmentDistribution.tsx`, `SourcingDonut.tsx`, and `QueryLogsTable.tsx`.
+- **UI Clean-up, Roadmap Clarity & Empty States**:
+  - `SettingsView.tsx`: Clarified mock integrations (`Greenhouse`, `Checkr`, `The Work Number`) with a "Roadmap Preview / Upcoming" badge to eliminate misleading live webhook claims.
+  - `Sidebar.tsx`: Replaced hardcoded "US-EAST-AI-01" cluster label with dynamic "Docker Cluster".
+  - `DepartmentTabs.tsx`: Restored all department tabs (`All Departments`, `Engineering`, `Product & Design`, `Sales & Marketing`, `Data & AI`).
+  - `JobPostingsView.tsx`: Removed fake `"Sync Active: 14 Nodes"` marketing copy; added empty state for search queries and unseeded states.
+  - `CandidateCard.tsx`: Removed hardcoded `+ OSS Contributor (5k stars)` tag from hero card.
+  - `CopilotChat.tsx`: Removed hardcoded `'Sarah Jenkins'` message sender (replaced with `'Recruiter'`) and removed dead/unhandled icon buttons.
+  - `AnalyticsView.tsx`: Replaced hardcoded "1,280" with dynamic `kpis.totalPipeline`; added empty states for department quality, sourcing channels, and natural language queries.
+  - `DossierView.tsx`: Applicant pool rail dynamically connects to `useCandidates(selectedRequisitionId)`; empty state added when candidate is not found.
+- **Test Decoupling**:
+  - `frontend/src/tests/App.test.tsx`: Decoupled candidate search assertion from hardcoded mock candidate name `'Dr. Elena Rostova'`, asserting on UI landmark `Filtered Pool`.
+  - `frontend/e2e/recruiter.spec.ts`: Made candidate and requisition assertions conditional and resilient to live database content.
+
 ## [1.1.0] - 2026-10-31
 
 ### Backend API Integration (`cv_analyzer`)

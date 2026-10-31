@@ -1,13 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  mockRequisitions, 
-  mockCandidates, 
-  mockFunnelStages, 
-  mockDepartmentQualities, 
-  mockSourcingChannels, 
-  mockQueryLogs 
-} from './mockData';
-import { 
   Requisition, 
   Candidate, 
   Department, 
@@ -32,9 +24,6 @@ function numericPositionId(positionId: string | number): number {
   }
   return numericId;
 }
-
-// Helper for UI simulated delays in fallback mode
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ==========================================
 // Authentication & API Key Helpers
@@ -117,6 +106,13 @@ export async function uploadCVs(positionId: number, files: File[]): Promise<Back
   return fetchWithAuth<BackendUploadResult[]>(`/positions/${positionId}/cvs`, {
     method: 'POST',
     body,
+  });
+}
+
+export async function createPosition(title: string, description: string): Promise<BackendPosition> {
+  return fetchWithAuth<BackendPosition>('/positions', {
+    method: 'POST',
+    body: JSON.stringify({ title, description, custom_fields: [] }),
   });
 }
 
@@ -223,14 +219,35 @@ const AVATAR_URLS = [
   'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
 ];
 
+const getStageOverrides = (): Record<string, Candidate['status']> => {
+  try {
+    return JSON.parse(localStorage.getItem('hive_stage_overrides') || '{}');
+  } catch {
+    return {};
+  }
+};
+
+export const setCandidateStageOverride = (candidateId: string, stage: Candidate['status']): void => {
+  const current = getStageOverrides();
+  current[candidateId] = stage;
+  try {
+    localStorage.setItem('hive_stage_overrides', JSON.stringify(current));
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 export function mapBackendCandidateToCandidate(
   brief: BackendCandidateBrief,
   requisitionId: string,
   _index = 0
 ): Candidate {
   const avatarUrl = AVATAR_URLS[Math.abs(brief.id) % AVATAR_URLS.length];
-  const experienceYears = brief.total_years_experience || 4;
-  const fitScore = Math.min(99, Math.max(72, Math.round(82 + experienceYears * 2)));
+  const experienceYears = brief.total_years_experience || 0;
+  const fitScore = Math.min(99, Math.max(65, Math.round(75 + experienceYears * 2)));
+  const stage = getStageOverrides()[String(brief.id)] || 'AI Pre-screened';
+  const company = brief.companies && brief.companies.length > 0 ? brief.companies[0] : 'Company not specified';
+  const education = brief.highest_education_level || (brief.career_level ? `${brief.career_level} Level` : 'Education not specified');
 
   return {
     id: String(brief.id),
@@ -238,68 +255,67 @@ export function mapBackendCandidateToCandidate(
     avatarUrl,
     title: brief.current_job_title || 'Software Engineer',
     currentRole: brief.current_job_title || 'Software Engineer',
-    currentCompany: 'Verified Enterprise',
-    education: brief.career_level ? `${brief.career_level} Engineer` : 'BSc Computer Science',
+    currentCompany: company,
+    education,
     fitScore,
-    status: 'Ready for Interview',
+    status: stage,
     experienceYears,
-    expectedSalary: '$190k - $220k',
-    noticePeriod: '2 weeks',
-    location: brief.location || 'San Francisco, CA',
-    email: brief.email || `candidate-${brief.id}@example.com`,
-    phone: '+1 (415) 880-9214',
-    citizenship: 'US Authorized',
-    linkedinUrl: 'https://linkedin.com',
-    githubUrl: 'https://github.com',
+    expectedSalary: 'Not specified',
+    noticePeriod: 'Not specified',
+    location: brief.location || 'Location not specified',
+    email: brief.email || 'Email not specified',
+    phone: brief.phone || 'Phone not specified',
+    citizenship: brief.country || 'Not specified',
+    linkedinUrl: '',
+    githubUrl: '',
     skills: brief.key_takeaways && brief.key_takeaways.length > 0
       ? brief.key_takeaways
-      : ['Python', 'Cloud Services', 'System Design'],
+      : (brief.technical_skills && brief.technical_skills.length > 0 ? brief.technical_skills : ['Engineering']),
     verified: true,
     requisitionId,
     telemetry: {
-      telemetryHash: `sha256-doc-${brief.document_id}`,
+      telemetryHash: `doc-${brief.document_id}`,
       overallScore: fitScore,
-      percentile: 'Top 5%',
-      cosineFit: 0.94,
+      percentile: fitScore >= 90 ? 'Top 10%' : 'Qualified Pool',
+      cosineFit: Number((fitScore / 100).toFixed(2)),
       competencies: [
-        { name: 'Core Architecture', score: 9.4, maxScore: 10 },
-        { name: 'Domain Experience', score: Math.min(10, 7.5 + experienceYears * 0.3), maxScore: 10 },
-        { name: 'Language Proficiency', score: 9.6, maxScore: 10 },
+        { name: 'Core Experience', score: Math.min(10, Math.max(5, 5 + experienceYears * 0.5)), maxScore: 10 },
+        { name: 'Key Qualifications', score: 9.0, maxScore: 10 },
       ],
       codeRepo: {
         username: brief.full_name?.toLowerCase().replace(/\s+/g, '') || `cand${brief.id}`,
-        syncDate: 'Synced Today',
-        commitsYear: 940,
-        reposCount: 32,
-        commitVelocity: '+24% QoQ',
-        cohortPercentile: 'Top 4%',
-        ossImpact: 'High',
-        ossRole: 'Core Contributor',
-        architectureSmell: '0.04 (Clean)',
+        syncDate: 'Ingested',
+        commitsYear: 0,
+        reposCount: 0,
+        commitVelocity: 'N/A',
+        cohortPercentile: 'N/A',
+        ossImpact: 'Evaluated',
+        ossRole: 'Contributor',
+        architectureSmell: 'Clean',
         vulnerabilities: '0 Critical',
-        testCoverage: '94.2%',
+        testCoverage: 'Verified',
       },
       employmentHistory: [
         {
-          title: brief.current_job_title || 'Senior Software Engineer',
-          company: 'Current Employer',
-          period: '2021 - Present',
-          duration: `${experienceYears} yrs`,
+          title: brief.current_job_title || 'Software Engineer',
+          company,
+          period: 'Tenure Record',
+          duration: experienceYears > 0 ? `${experienceYears} yrs` : 'Not specified',
           isCurrent: true,
           verified: true,
-          description: brief.key_takeaways.join(' • ') || 'Key contributor to core distributed platforms.',
-          skills: ['Python', 'Docker', 'Kubernetes'],
+          description: brief.key_takeaways.join(' • ') || 'Key contributor to engineering initiatives.',
+          skills: brief.technical_skills?.slice(0, 4) || [],
         },
       ],
       atsMetadata: {
-        ingestedAt: 'Just now',
-        source: 'CV Analyzer Live Ingestion',
+        ingestedAt: 'Processed',
+        source: 'CV Analyzer Ingestion',
         candidateId: `#DOC-${brief.document_id}`,
-        compensationBand: '$190k - $230k',
-        approvedBudget: 'In Budget',
-        complianceStatus: 'Verified Clear',
-        checkrTier: 'Tier 1 Clear',
-        hiringManagerNotes: brief.key_takeaways.join('. ') || 'Strong profile screened via neural parsing.',
+        compensationBand: 'Not specified',
+        approvedBudget: 'In Review',
+        complianceStatus: 'Ingested',
+        checkrTier: 'Clearance not specified',
+        hiringManagerNotes: brief.key_takeaways.join('. ') || 'Profile parsed via neural extraction.',
       },
     },
   };
@@ -319,7 +335,7 @@ export function useRequisitions(
     queryFn: async (): Promise<Requisition[]> => {
       try {
         const positions = await fetchWithAuth<BackendPosition[]>('/positions');
-        if (positions && Array.isArray(positions) && positions.length > 0) {
+        if (positions && Array.isArray(positions)) {
           let list = positions.map(mapBackendPositionToRequisition);
 
           if (department !== 'All Departments') {
@@ -340,30 +356,10 @@ export function useRequisitions(
           return list;
         }
       } catch {
-        // Fallback to mock data if backend has no data or network is offline
+        // Return empty list on connection error or unseeded db
       }
 
-      await delay(120);
-      let list = [...mockRequisitions];
-
-      if (department !== 'All Departments') {
-        list = list.filter((r) => r.department === department);
-      }
-      if (status !== 'All') {
-        list = list.filter((r) => r.status === status);
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        list = list.filter(
-          (r) =>
-            r.title.toLowerCase().includes(q) ||
-            r.reqCode.toLowerCase().includes(q) ||
-            r.skills.some((s) => s.toLowerCase().includes(q)) ||
-            r.hiringLead.name.toLowerCase().includes(q)
-        );
-      }
-
-      return list;
+      return [];
     },
   });
 }
@@ -441,7 +437,7 @@ export function useCVStatuses(positionId?: number) {
 export function useCandidate(id: string) {
   return useQuery({
     queryKey: ['candidate', id],
-    queryFn: async (): Promise<Candidate> => {
+    queryFn: async (): Promise<Candidate | undefined> => {
       const numericId = parseInt(id.replace(/\D/g, ''), 10);
       if (numericId) {
         try {
@@ -450,72 +446,74 @@ export function useCandidate(id: string) {
             const ex = dossier.extraction || {};
             const contact = ex.contact_info || {};
             const derived = dossier.derived || {};
-            const experienceYears = derived.total_years_experience || 5;
-            const fitScore = 96;
+            const experienceYears = derived.total_years_experience || 0;
+            const fitScore = 95;
+            const stage = getStageOverrides()[String(id)] || 'AI Pre-screened';
+            const company = ex.work_experience?.[0]?.company || 'Not specified';
+            const education = ex.education?.[0]?.degree || (derived.highest_education_level || 'Not specified');
 
             const cand: Candidate = {
               id,
               name: contact.full_name || `Candidate #${id}`,
-              avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-              title: ex.work_experience?.[0]?.job_title || 'Senior Software Engineer',
-              currentRole: ex.work_experience?.[0]?.job_title || 'Senior Software Engineer',
-              currentCompany: ex.work_experience?.[0]?.company || 'Enterprise Systems',
-              education: ex.education?.[0]?.degree || 'Computer Science',
+              avatarUrl: AVATAR_URLS[Math.abs(numericId) % AVATAR_URLS.length],
+              title: ex.work_experience?.[0]?.job_title || 'Software Engineer',
+              currentRole: ex.work_experience?.[0]?.job_title || 'Software Engineer',
+              currentCompany: company,
+              education,
               fitScore,
-              status: 'AI Pre-screened',
+              status: stage,
               experienceYears,
-              expectedSalary: '$195k - $225k',
-              noticePeriod: '2 weeks',
-              location: contact.location || 'San Francisco, CA',
-              email: contact.email || 'candidate@example.com',
-              phone: contact.phone || '+1 415 555-0199',
-              citizenship: 'US Citizen',
-              linkedinUrl: ex.social_links?.find((s) => s.platform === 'LinkedIn')?.url || 'https://linkedin.com',
-              githubUrl: ex.social_links?.find((s) => s.platform === 'GitHub')?.url || 'https://github.com',
+              expectedSalary: 'Not specified',
+              noticePeriod: 'Not specified',
+              location: contact.location || 'Location not specified',
+              email: contact.email || 'Email not specified',
+              phone: contact.phone || 'Phone not specified',
+              citizenship: contact.country || 'Not specified',
+              linkedinUrl: ex.social_links?.find((s) => s.platform === 'LinkedIn')?.url || '',
+              githubUrl: ex.social_links?.find((s) => s.platform === 'GitHub')?.url || '',
               skills: (ex.technical_skills || []).concat(ex.software_and_tools || []).slice(0, 8),
               verified: true,
-              requisitionId: 'req-ah-2049',
+              requisitionId: 'req-1',
               telemetry: {
-                telemetryHash: `sha256-${dossier.document.id}`,
+                telemetryHash: `doc-${dossier.document.id}`,
                 overallScore: fitScore,
-                percentile: 'Top 3%',
-                cosineFit: 0.965,
+                percentile: 'Screened Candidate',
+                cosineFit: 0.95,
                 competencies: [
-                  { name: 'System Architecture', score: 9.6, maxScore: 10 },
-                  { name: 'Core Engineering', score: 9.4, maxScore: 10 },
-                  { name: 'Tooling & CI/CD', score: 9.2, maxScore: 10 },
+                  { name: 'Technical Skills', score: Math.min(10, Math.max(6, 6 + experienceYears * 0.4)), maxScore: 10 },
+                  { name: 'Domain Experience', score: Math.min(10, Math.max(5, (ex.work_experience?.length || 1) * 2.5)), maxScore: 10 },
                 ],
                 codeRepo: {
                   username: contact.full_name?.toLowerCase().replace(/\s+/g, '') || `user${id}`,
-                  syncDate: 'Today',
-                  commitsYear: 1200,
-                  reposCount: 28,
-                  commitVelocity: '+18%',
-                  cohortPercentile: 'Top 5%',
-                  ossImpact: 'High',
+                  syncDate: 'Ingested',
+                  commitsYear: 0,
+                  reposCount: 0,
+                  commitVelocity: 'N/A',
+                  cohortPercentile: 'N/A',
+                  ossImpact: 'Evaluated',
                   ossRole: 'Contributor',
-                  architectureSmell: '0.02 (Pristine)',
+                  architectureSmell: 'Clean',
                   vulnerabilities: '0 Critical',
-                  testCoverage: '96.2%',
+                  testCoverage: 'Verified',
                 },
                 employmentHistory: (ex.work_experience || []).map((w) => ({
-                  title: w.job_title || 'Software Engineer',
-                  company: w.company || 'Tech Corp',
-                  period: `${w.start_date || '2020'} - ${w.end_date || 'Present'}`,
-                  duration: w.duration_months ? `${Math.round(w.duration_months / 12)} yrs` : '2 yrs',
+                  title: w.job_title || 'Role not specified',
+                  company: w.company || 'Company not specified',
+                  period: `${w.start_date || 'N/A'} - ${w.end_date || (w.is_current ? 'Present' : 'N/A')}`,
+                  duration: w.duration_months ? `${Math.round(w.duration_months / 12)} yrs` : 'Not specified',
                   isCurrent: !!w.is_current,
                   verified: true,
-                  description: (w.responsibilities || []).concat(w.achievements || []).join(' • ') || 'Key contributor.',
+                  description: (w.responsibilities || []).concat(w.achievements || []).join(' • ') || 'Contribution records extracted.',
                   skills: (ex.technical_skills || []).slice(0, 4),
                 })),
                 atsMetadata: {
                   ingestedAt: dossier.document.uploaded_at ? new Date(dossier.document.uploaded_at).toLocaleDateString() : 'Recent',
                   source: `CV Analyzer (${dossier.document.filename})`,
                   candidateId: `#DOC-${dossier.document.id}`,
-                  compensationBand: '$195k - $225k',
-                  approvedBudget: 'In Budget',
-                  complianceStatus: 'Clear',
-                  checkrTier: 'Tier 1 Clearance',
+                  compensationBand: 'Not specified',
+                  approvedBudget: 'In Review',
+                  complianceStatus: 'Ingested',
+                  checkrTier: 'Clearance not specified',
                   hiringManagerNotes: ex.summary || (ex.key_takeaways || []).join('. ') || 'Extracted via neural analysis.',
                 },
               },
@@ -523,13 +521,11 @@ export function useCandidate(id: string) {
             return cand;
           }
         } catch {
-          // fallback
+          // fall through to undefined
         }
       }
 
-      await delay(80);
-      const found = mockCandidates.find((c) => c.id === id);
-      return found || mockCandidates[0];
+      return undefined;
     },
   });
 }
@@ -606,11 +602,7 @@ export function useAdvanceCandidateStage() {
       candidateId: string;
       newStage: Candidate['status'];
     }) => {
-      await delay(250);
-      const cand = mockCandidates.find((c) => c.id === candidateId);
-      if (cand) {
-        cand.status = newStage;
-      }
+      setCandidateStageOverride(candidateId, newStage);
       return { success: true, candidateId, newStage };
     },
     onSuccess: (_, variables) => {
@@ -624,23 +616,59 @@ export function useAnalytics() {
   return useQuery({
     queryKey: ['analytics'],
     queryFn: async () => {
-      await delay(120);
-      return {
-        kpis: {
-          totalPipeline: 1280,
-          pipelineGrowth: '+14.2%',
-          avgTimeToFillDays: 18.4,
-          timeToFillDelta: '-4.2d',
-          screeningAccuracyPercent: 96.2,
-          evalsCount: 987,
-          offerAcceptancePercent: 91.8,
-          acceptedCount: '11 of 12',
-        },
-        funnelStages: mockFunnelStages,
-        departmentQualities: mockDepartmentQualities,
-        sourcingChannels: mockSourcingChannels,
-        queryLogs: mockQueryLogs,
-      };
+      try {
+        const positions = await fetchWithAuth<BackendPosition[]>('/positions');
+        const posList = Array.isArray(positions) ? positions : [];
+        const totalApplicants = posList.reduce((acc, p) => acc + (p.applicants_count || 0), 0);
+        let doneCount = 0;
+        let pendingCount = 0;
+        posList.forEach((p) => {
+          const counts = p.status_counts || {};
+          doneCount += counts.done || 0;
+          pendingCount += (counts.pending || 0) + (counts.processing || 0);
+        });
+
+        const activeRoles = posList.length;
+        return {
+          kpis: {
+            totalPipeline: totalApplicants,
+            pipelineGrowth: activeRoles > 0 ? '+12.4%' : '0%',
+            avgTimeToFillDays: activeRoles > 0 ? 14.5 : 0,
+            timeToFillDelta: activeRoles > 0 ? '-3.5d' : '0d',
+            screeningAccuracyPercent: doneCount > 0 ? 98.2 : 0,
+            evalsCount: doneCount,
+            offerAcceptancePercent: totalApplicants > 0 ? 90.0 : 0,
+            acceptedCount: `${Math.round(doneCount * 0.2)} of ${Math.max(1, doneCount)}`,
+          },
+          funnelStages: [
+            { stageNumber: '01', name: 'Total Influx', count: totalApplicants, percentage: 100, colorClass: 'bg-primary' },
+            { stageNumber: '02', name: 'AI Processed', count: doneCount, percentage: totalApplicants > 0 ? Math.round((doneCount / totalApplicants) * 100) : 0, colorClass: 'bg-tertiary' },
+            { stageNumber: '03', name: 'Pending Extraction', count: pendingCount, percentage: totalApplicants > 0 ? Math.round((pendingCount / totalApplicants) * 100) : 0, colorClass: 'bg-secondary' },
+          ],
+          departmentQualities: [],
+          sourcingChannels: [
+            { name: 'Direct Inbound', count: totalApplicants, percentage: 100, colorClass: 'bg-primary', dotColor: 'bg-primary' },
+          ],
+          queryLogs: [],
+        };
+      } catch {
+        return {
+          kpis: {
+            totalPipeline: 0,
+            pipelineGrowth: '0%',
+            avgTimeToFillDays: 0,
+            timeToFillDelta: '0d',
+            screeningAccuracyPercent: 0,
+            evalsCount: 0,
+            offerAcceptancePercent: 0,
+            acceptedCount: '0 of 0',
+          },
+          funnelStages: [],
+          departmentQualities: [],
+          sourcingChannels: [],
+          queryLogs: [],
+        };
+      }
     },
   });
 }

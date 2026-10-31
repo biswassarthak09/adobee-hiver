@@ -1,6 +1,7 @@
 import React from 'react';
 import { Candidate } from '../../types';
 import { useNavigation } from '../../context/NavigationContext';
+import { useToast } from '../../context/ToastContext';
 
 interface CandidateCardProps {
   candidate: Candidate;
@@ -12,6 +13,7 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
   isHero = false,
 }) => {
   const { openCandidateDossier } = useNavigation();
+  const { showToast } = useToast();
 
   if (isHero) {
     return (
@@ -113,15 +115,12 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
                 {skill}
               </span>
             ))}
-            <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 px-2 py-0.5 rounded font-mono text-xs font-semibold">
-              + OSS Contributor (5k stars)
-            </span>
           </div>
 
           <button
             onClick={(e) => {
               e.stopPropagation();
-              alert(`Interview screen scheduled with ${candidate.name}!`);
+              showToast(`Interview screen scheduled with ${candidate.name}!`, 'success');
             }}
             className="bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg hover:bg-amber-400 transition-all self-end md:self-auto shrink-0 shadow-md active:scale-95"
           >

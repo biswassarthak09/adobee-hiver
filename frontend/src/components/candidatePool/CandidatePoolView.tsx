@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { mapBackendCandidateToCandidate, useCandidates, useRequisition } from '../../services/api';
 import { useNavigation } from '../../context/NavigationContext';
+import { useToast } from '../../context/ToastContext';
 import { CopilotChat } from './CopilotChat';
 import { CandidateCard } from './CandidateCard';
 import { BackendCandidateBrief } from '../../types';
@@ -8,6 +9,7 @@ import { BackendCandidateBrief } from '../../types';
 export const CandidatePoolView: React.FC = () => {
   const { selectedRequisitionId, setCurrentView } = useNavigation();
   const { data: requisition } = useRequisition(selectedRequisitionId);
+  const { showToast } = useToast();
 
   const [activeTokens, setActiveTokens] = useState<string[]>([]);
   const [filteredCandidates, setFilteredCandidates] = useState<BackendCandidateBrief[] | null>(null);
@@ -98,14 +100,14 @@ export const CandidatePoolView: React.FC = () => {
               <span className="text-xs text-on-surface-variant">Total Applicants</span>
             </div>
             <button 
-              onClick={() => alert('Exporting candidate talent pool CSV/JSON...')}
+              onClick={() => showToast('Exporting candidate talent pool CSV/JSON...', 'info')}
               className="bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 border border-white/5 transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">file_download</span>
               <span>Export Pool</span>
             </button>
             <button 
-              onClick={() => alert('Opening batch screening actions modal...')}
+              onClick={() => showToast('Batch screening actions panel ready.', 'info')}
               className="bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 border border-white/5 transition-all"
             >
               <span className="material-symbols-outlined text-[18px]">checklist</span>

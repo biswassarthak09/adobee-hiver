@@ -12,6 +12,10 @@ export const DepartmentTabs: React.FC<DepartmentTabsProps> = ({
 }) => {
   const departments: { id: Department; label: string }[] = [
     { id: 'All Departments', label: 'All Departments' },
+    { id: 'Engineering', label: 'Engineering' },
+    { id: 'Product & Design', label: 'Product & Design' },
+    { id: 'Sales & Marketing', label: 'Sales & Marketing' },
+    { id: 'Data & AI', label: 'Data & AI' },
   ];
 
   return (
