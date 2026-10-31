@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useRequisitions } from '../../services/api';
+import { createPosition, useRequisitions } from '../../services/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { Department, RequisitionStatus } from '../../types';
 import { DepartmentTabs } from './DepartmentTabs';
 import { RequisitionCard } from './RequisitionCard';
@@ -10,9 +11,15 @@ export const JobPostingsView: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<RequisitionStatus | 'All'>('All');
   const [searchInput, setSearchInput] = useState('');
   const { globalSearchQuery, selectedRequisitionId, setSelectedRequisitionId } = useNavigation();
+  const queryClient = useQueryClient();
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const effectiveSearch = searchInput || globalSearchQuery;
-  const { data: requisitions = [], isLoading } = useRequisitions(
+  const { data: requisitions = [], isLoading, isError } = useRequisitions(
     selectedDept,
     selectedStatus,
     effectiveSearch
@@ -25,6 +32,27 @@ export const JobPostingsView: React.FC = () => {
       setSelectedRequisitionId(requisitions[0].id);
     }
   }, [requisitions, selectedRequisitionId, setSelectedRequisitionId]);
+
+  const submitPosition = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newTitle.trim()) {
+      setCreateError('Enter a job title.');
+      return;
+    }
+    setCreating(true);
+    setCreateError('');
+    try {
+      await createPosition(newTitle.trim(), newDescription.trim());
+      await queryClient.invalidateQueries({ queryKey: ['requisitions'] });
+      setNewTitle('');
+      setNewDescription('');
+      setShowCreateForm(false);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : 'Unable to create job posting.');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="w-full min-h-screen bg-background px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -44,6 +72,30 @@ export const JobPostingsView: React.FC = () => {
                 Sync Active: 14 Nodes
               </span>
             </div>
+
+            {showCreateForm && (
+              <div className="relative z-10 mt-6">
+                <form onSubmit={submitPosition} className="max-w-2xl bg-surface-container-lowest rounded-xl p-4 border border-white/5 space-y-3">
+                  <input
+                    value={newTitle}
+                    onChange={(event) => setNewTitle(event.target.value)}
+                    placeholder="Job title"
+                    className="w-full bg-surface-container text-on-surface px-3 py-2 rounded-lg border border-white/10 text-sm"
+                  />
+                  <textarea
+                    value={newDescription}
+                    onChange={(event) => setNewDescription(event.target.value)}
+                    placeholder="Paste the job description"
+                    rows={6}
+                    className="w-full bg-surface-container text-on-surface px-3 py-2 rounded-lg border border-white/10 text-sm resize-y"
+                  />
+                  {createError && <p className="text-xs text-error">{createError}</p>}
+                  <button type="submit" disabled={creating} className="bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg disabled:opacity-50">
+                    {creating ? 'Creating...' : 'Create Job Posting'}
+                  </button>
+                </form>
+              </div>
+            )}
             <h1 className="font-headline text-2xl sm:text-3xl text-on-surface font-bold tracking-tight">
               Active Job Postings & Requisitions
             </h1>
@@ -51,6 +103,13 @@ export const JobPostingsView: React.FC = () => {
               Algorithmic sourcing, real-time candidate triage, and predictive conversion vectors across active organizational cohorts.
             </p>
           </div>
+
+          <button
+            onClick={() => setShowCreateForm((open) => !open)}
+            className="self-start xl:self-center bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg"
+          >
+            {showCreateForm ? 'Close' : 'Add Job Posting'}
+          </button>
 
           {/* Summary Pill Matrix & Sync Status */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
@@ -86,6 +145,12 @@ export const JobPostingsView: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {isError && (
+              <div className="bg-error/10 border border-error/30 text-error rounded-xl px-4 py-3 text-sm">
+                Unable to load job postings from the backend. Check the API connection and reload.
+              </div>
+            )}
 
             <div className="inline-flex items-center justify-center gap-2 bg-surface-container-high text-on-surface font-mono text-xs px-4 py-3 rounded-lg border border-white/10 shadow-sm">
               <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />

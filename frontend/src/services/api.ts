@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  mockRequisitions, 
   mockCandidates, 
   mockFunnelStages, 
   mockDepartmentQualities, 
@@ -117,6 +116,13 @@ export async function uploadCVs(positionId: number, files: File[]): Promise<Back
   return fetchWithAuth<BackendUploadResult[]>(`/positions/${positionId}/cvs`, {
     method: 'POST',
     body,
+  });
+}
+
+export async function createPosition(title: string, description: string): Promise<BackendPosition> {
+  return fetchWithAuth<BackendPosition>('/positions', {
+    method: 'POST',
+    body: JSON.stringify({ title, description, custom_fields: [] }),
   });
 }
 
@@ -317,34 +323,8 @@ export function useRequisitions(
   return useQuery({
     queryKey: ['requisitions', department, status, searchQuery],
     queryFn: async (): Promise<Requisition[]> => {
-      try {
-        const positions = await fetchWithAuth<BackendPosition[]>('/positions');
-        if (positions && Array.isArray(positions) && positions.length > 0) {
-          let list = positions.map(mapBackendPositionToRequisition);
-
-          if (department !== 'All Departments') {
-            list = list.filter((r) => r.department === department);
-          }
-          if (status !== 'All') {
-            list = list.filter((r) => r.status === status);
-          }
-          if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            list = list.filter(
-              (r) =>
-                r.title.toLowerCase().includes(q) ||
-                r.reqCode.toLowerCase().includes(q) ||
-                r.skills.some((s) => s.toLowerCase().includes(q))
-            );
-          }
-          return list;
-        }
-      } catch {
-        // Fallback to mock data if backend has no data or network is offline
-      }
-
-      await delay(120);
-      let list = [...mockRequisitions];
+      const positions = await fetchWithAuth<BackendPosition[]>('/positions');
+      let list = positions.map(mapBackendPositionToRequisition);
 
       if (department !== 'All Departments') {
         list = list.filter((r) => r.department === department);
@@ -362,7 +342,6 @@ export function useRequisitions(
             r.hiringLead.name.toLowerCase().includes(q)
         );
       }
-
       return list;
     },
   });
