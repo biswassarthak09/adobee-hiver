@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCandidate, useCandidates, useAdvanceCandidateStage, useReprocessCandidateCV } from '../../services/api';
 import { useNavigation } from '../../context/NavigationContext';
 import { useToast } from '../../context/ToastContext';
@@ -18,9 +18,15 @@ export const DossierView: React.FC = () => {
   const { showToast } = useToast();
   const [reprocessing, setReprocessing] = useState(false);
   const [notesList, setNotesList] = useState<string[]>([
-    candidate?.telemetry?.atsMetadata.hiringManagerNotes ||
+    candidate?.telemetry?.atsMetadata?.hiringManagerNotes ||
       'Profile extracted via neural CV parser.',
   ]);
+
+  useEffect(() => {
+    if (candidate?.telemetry?.atsMetadata?.hiringManagerNotes) {
+      setNotesList([candidate.telemetry.atsMetadata.hiringManagerNotes]);
+    }
+  }, [candidate?.id, candidate?.telemetry?.atsMetadata?.hiringManagerNotes]);
 
   if (!candidate) {
     return (

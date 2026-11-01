@@ -46,7 +46,7 @@ export const CandidateHeaderBanner: React.FC<CandidateHeaderBannerProps> = ({
             </div>
 
             <div className="text-sm text-on-surface-variant mb-2">
-              Lead AI Engineer Candidate • {candidate.currentCompany}
+              {candidate.title || 'Candidate'} • {candidate.currentCompany}
             </div>
 
             <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-on-surface-variant">

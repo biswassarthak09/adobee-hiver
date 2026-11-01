@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { mapBackendCandidateToCandidate, useCandidates, useRequisition } from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { mapBackendCandidateToCandidate, useCandidates, useRequisition, useRequisitions } from '../../services/api';
 import { useNavigation } from '../../context/NavigationContext';
 import { useToast } from '../../context/ToastContext';
 import { CopilotChat } from './CopilotChat';
@@ -7,7 +7,15 @@ import { CandidateCard } from './CandidateCard';
 import { BackendCandidateBrief } from '../../types';
 
 export const CandidatePoolView: React.FC = () => {
-  const { selectedRequisitionId, setCurrentView } = useNavigation();
+  const { selectedRequisitionId, setSelectedRequisitionId, setCurrentView } = useNavigation();
+  const { data: requisitions = [] } = useRequisitions();
+
+  useEffect(() => {
+    if (!selectedRequisitionId && requisitions.length > 0) {
+      setSelectedRequisitionId(requisitions[0].id);
+    }
+  }, [requisitions, selectedRequisitionId, setSelectedRequisitionId]);
+
   const { data: requisition } = useRequisition(selectedRequisitionId);
   const { showToast } = useToast();
 
@@ -81,7 +89,7 @@ export const CandidatePoolView: React.FC = () => {
               </span>
               <span>•</span>
               <span>
-                Hiring Lead: <strong className="text-on-surface font-semibold">{requisition?.hiringLead.name || 'Unassigned'}</strong>
+                Hiring Lead: <strong className="text-on-surface font-semibold">{requisition?.hiringLead?.name || 'Unassigned'}</strong>
               </span>
               <span>•</span>
               <span>

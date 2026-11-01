@@ -54,9 +54,11 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
     setCurrentIds(undefined);
     onFilterResult?.(null);
     onResetTokens();
-    void saveChatSession(selectedRequisitionId, [], []).catch((error) => {
-      console.error('Unable to reset chat session:', error);
-    });
+    if (selectedRequisitionId) {
+      void saveChatSession(selectedRequisitionId, [], []).catch((error) => {
+        console.error('Unable to reset chat session:', error);
+      });
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -73,10 +75,22 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({
 
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
+    setInputPrompt('');
+
+    if (!selectedRequisitionId) {
+      const infoMsg: ChatMessage = {
+        id: `msg-info-${Date.now()}`,
+        sender: 'copilot',
+        timestamp: 'Just now',
+        text: 'Select an active job posting before running recruiter filters.',
+      };
+      setMessages([...nextMessages, infoMsg]);
+      return;
+    }
+
     void saveChatSession(selectedRequisitionId, nextMessages, currentIds || []).catch((error) => {
       console.error('Unable to save chat session:', error);
     });
-    setInputPrompt('');
 
     // Attempt real backend Recruiter Agent filtering
     try {

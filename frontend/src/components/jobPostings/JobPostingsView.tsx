@@ -73,34 +73,6 @@ export const JobPostingsView: React.FC = () => {
               </span>
             </div>
 
-            {showCreateForm && (
-              <div className="relative z-10 mt-6">
-                <form onSubmit={submitPosition} className="max-w-2xl bg-surface-container-lowest rounded-xl p-4 border border-white/5 space-y-3 shadow-xl">
-                  <input
-                    value={newTitle}
-                    onChange={(event) => setNewTitle(event.target.value)}
-                    placeholder="Job title (e.g. Senior Machine Learning Engineer)"
-                    className="w-full bg-surface-container text-on-surface px-3 py-2 rounded-lg border border-white/10 text-sm focus:outline-none focus:border-primary"
-                  />
-                  <textarea
-                    value={newDescription}
-                    onChange={(event) => setNewDescription(event.target.value)}
-                    placeholder="Paste the job description and key technical requirements..."
-                    rows={6}
-                    className="w-full bg-surface-container text-on-surface px-3 py-2 rounded-lg border border-white/10 text-sm resize-y focus:outline-none focus:border-primary"
-                  />
-                  {createError && <p className="text-xs text-error">{createError}</p>}
-                  <button
-                    type="submit"
-                    disabled={creating}
-                    className="bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-amber-400 transition-all shadow"
-                  >
-                    {creating ? 'Creating...' : 'Create Job Posting'}
-                  </button>
-                </form>
-              </div>
-            )}
-
             <h1 className="font-headline text-2xl sm:text-3xl text-on-surface font-bold tracking-tight">
               Active Job Postings & Requisitions
             </h1>
@@ -111,9 +83,10 @@ export const JobPostingsView: React.FC = () => {
 
           <button
             onClick={() => setShowCreateForm((open) => !open)}
-            className="self-start xl:self-center bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg hover:bg-amber-400 transition-all shadow"
+            className="self-start xl:self-center bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg hover:bg-amber-400 transition-all shadow flex items-center gap-1.5"
           >
-            {showCreateForm ? 'Close' : 'Add Job Posting'}
+            <span className="material-symbols-outlined text-[16px]">{showCreateForm ? 'close' : 'add'}</span>
+            <span>{showCreateForm ? 'Cancel' : 'Add Job Posting'}</span>
           </button>
 
           {/* Summary Pill Matrix & Sync Status */}
@@ -163,6 +136,57 @@ export const JobPostingsView: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Collapsible Create Job Posting Form */}
+        {showCreateForm && (
+          <div className="mt-6 p-5 bg-surface-container-lowest rounded-xl border border-primary/30 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <span className="font-headline text-sm font-semibold text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px]">add_circle</span>
+                New Position Specification
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="text-on-surface-variant hover:text-on-surface"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+            <form onSubmit={submitPosition} className="space-y-3">
+              <input
+                value={newTitle}
+                onChange={(event) => setNewTitle(event.target.value)}
+                placeholder="Job title (e.g. Senior Machine Learning Engineer)"
+                className="w-full bg-surface-container text-on-surface px-3 py-2 rounded-lg border border-white/10 text-sm focus:outline-none focus:border-primary"
+              />
+              <textarea
+                value={newDescription}
+                onChange={(event) => setNewDescription(event.target.value)}
+                placeholder="Paste the job description and key technical requirements..."
+                rows={5}
+                className="w-full bg-surface-container text-on-surface px-3 py-2 rounded-lg border border-white/10 text-sm resize-y focus:outline-none focus:border-primary"
+              />
+              {createError && <p className="text-xs text-error">{createError}</p>}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(false)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-mono text-on-surface-variant hover:bg-surface-container"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="bg-primary text-black font-semibold text-xs px-4 py-2 rounded-lg disabled:opacity-50 hover:bg-amber-400 transition-all shadow"
+                >
+                  {creating ? 'Creating...' : 'Create Job Posting'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Department Selector Tabs */}
         <div className="mt-6 pt-4 border-t border-white/5">

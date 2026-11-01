@@ -4,32 +4,32 @@
 
 @layer base {
   :root {
-    --color-background: 248 250 252;
+    --color-background: 255 255 255;
     --color-surface: 255 255 255;
-    --color-surface-dim: 241 245 249;
+    --color-surface-dim: 247 247 245;
     --color-surface-bright: 255 255 255;
     --color-surface-container-lowest: 255 255 255;
-    --color-surface-container-low: 248 250 252;
-    --color-surface-container: 241 245 249;
-    --color-surface-container-high: 226 232 240;
-    --color-surface-container-highest: 203 213 225;
-    --color-on-surface: 15 23 42;
-    --color-on-surface-variant: 100 116 139;
-    --color-on-background: 15 23 42;
-    --color-outline: 203 213 225;
-    --color-outline-variant: 226 232 240;
+    --color-surface-container-low: 247 247 245;
+    --color-surface-container: 241 241 238;
+    --color-surface-container-high: 230 231 227;
+    --color-surface-container-highest: 207 209 204;
+    --color-on-surface: 22 24 29;
+    --color-on-surface-variant: 91 96 107;
+    --color-on-background: 22 24 29;
+    --color-outline: 207 209 204;
+    --color-outline-variant: 230 231 227;
 
-    --color-primary: 217 119 6;
-    --color-primary-container: 254 243 199;
+    --color-primary: 217 154 30;
+    --color-primary-container: 251 241 217;
     --color-on-primary: 255 255 255;
-    --color-on-primary-container: 120 53 15;
+    --color-on-primary-container: 138 95 10;
 
-    --color-secondary: 2 132 199;
-    --color-secondary-container: 224 242 254;
-    --color-on-secondary: 255 255 255;
+    --color-secondary: 242 182 60;
+    --color-secondary-container: 251 241 217;
+    --color-on-secondary: 22 24 29;
 
-    --color-tertiary: 5 150 105;
-    --color-tertiary-container: 209 250 229;
+    --color-tertiary: 31 122 77;
+    --color-tertiary-container: 234 244 239;
     --color-on-tertiary: 255 255 255;
   }
 
@@ -115,12 +115,17 @@
 
 /* Glassmorphism helpers */
 .glass-panel {
-  background: rgba(15, 19, 28, 0.85);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(207, 209, 204, 0.6);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 19, 28, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .glow-amber {
-  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 25px -5px rgba(217, 154, 30, 0.25);
 }

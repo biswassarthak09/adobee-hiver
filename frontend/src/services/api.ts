@@ -142,6 +142,10 @@ export async function fetchChatSession(positionId: string | number): Promise<{
   currentCandidateIds: number[];
   candidates: BackendCandidateBrief[];
 }> {
+  const str = String(positionId || '').trim();
+  if (!str) {
+    return { messages: [], currentCandidateIds: [], candidates: [] };
+  }
   const numericId = numericPositionId(positionId);
   const row = await fetchWithAuth<{
     messages: ChatMessage[];
@@ -160,6 +164,8 @@ export async function saveChatSession(
   messages: ChatMessage[],
   currentCandidateIds: number[]
 ): Promise<void> {
+  const str = String(positionId || '').trim();
+  if (!str) return;
   const numericId = numericPositionId(positionId);
   await fetchWithAuth(`/positions/${numericId}/chat-session`, {
     method: 'PUT',
@@ -376,6 +382,7 @@ export function useRequisition(id: string) {
 
       return undefined;
     },
+    enabled: Boolean(id),
   });
 }
 
@@ -401,6 +408,7 @@ export function useCandidates(
       }
       return [];
     },
+    enabled: Boolean(requisitionId),
   });
 }
 
@@ -520,6 +528,7 @@ export function useCandidate(id: string) {
 
       return undefined;
     },
+    enabled: Boolean(id),
   });
 }
 

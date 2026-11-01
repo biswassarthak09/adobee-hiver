@@ -49,7 +49,7 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
                   {candidate.name}
                 </h2>
                 <span className="bg-surface-container-high px-2 py-0.5 rounded text-on-surface font-mono text-xs border border-white/5">
-                  {candidate.education.split('(')[0]}
+                  {(candidate.education || 'Education not specified').split('(')[0]}
                 </span>
                 <span className="bg-tertiary/15 text-tertiary font-mono text-[10px] uppercase px-2 py-0.5 rounded font-bold border border-tertiary/30">
                   {candidate.status}

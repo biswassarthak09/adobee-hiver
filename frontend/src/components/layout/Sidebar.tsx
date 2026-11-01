@@ -12,7 +12,7 @@ interface NavItem {
 
 export const Sidebar: React.FC = () => {
   const { currentView, setCurrentView, isMobileMenuOpen, setIsMobileMenuOpen } = useNavigation();
-  const { requisitions } = useRequisitions();
+  const { data: requisitions = [] } = useRequisitions();
 
   const navItems: NavItem[] = [
     {

@@ -213,6 +213,17 @@ export interface BackendUploadResult {
   reason?: string;
 }
 
+export interface AnalyticsKPIs {
+  totalPipeline: number;
+  pipelineGrowth: string;
+  avgTimeToFillDays: number;
+  timeToFillDelta: string;
+  screeningAccuracyPercent: number;
+  evalsCount: number;
+  offerAcceptancePercent: number;
+  acceptedCount: string;
+}
+
 export interface BackendCandidateBrief {
   id: number;
   document_id: number;
@@ -223,6 +234,11 @@ export interface BackendCandidateBrief {
   career_level: string | null;
   total_years_experience: number | null;
   key_takeaways: string[];
+  phone?: string | null;
+  country?: string | null;
+  companies?: string[];
+  highest_education_level?: string | null;
+  technical_skills?: string[];
 }
 
 export interface BackendFilterResponse {

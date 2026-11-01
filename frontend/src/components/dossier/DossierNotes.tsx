@@ -31,7 +31,7 @@ export const DossierNotes: React.FC<DossierNotesProps> = ({
           </span>
         </div>
         <span className="font-mono text-xs text-on-surface-variant">
-          Greenhouse Integration #GH-77821
+          {telemetry?.atsMetadata?.source || 'CV Ingestion System'}
         </span>
       </div>
 
@@ -39,13 +39,13 @@ export const DossierNotes: React.FC<DossierNotesProps> = ({
         <div className="bg-surface-container p-4 rounded-xl border border-white/5 space-y-2">
           <div className="flex items-center justify-between font-mono text-[10px] uppercase">
             <span className="text-on-surface-variant">Application Ingestion</span>
-            <span className="text-tertiary font-bold">GREENHOUSE API</span>
+            <span className="text-tertiary font-bold">DOCUMENT PARSER</span>
           </div>
           <div className="text-sm font-semibold text-on-surface">
-            {telemetry?.atsMetadata.ingestedAt || 'Oct 24, 2024 at 14:32:10 UTC'}
+            {telemetry?.atsMetadata?.ingestedAt || 'Processed'}
           </div>
           <div className="text-xs text-on-surface-variant leading-relaxed">
-            Source: {telemetry?.atsMetadata.source} • ID: {telemetry?.atsMetadata.candidateId}
+            Source: {telemetry?.atsMetadata?.source || 'CV Upload'} • ID: {telemetry?.atsMetadata?.candidateId || 'N/A'}
           </div>
         </div>
 
@@ -53,14 +53,14 @@ export const DossierNotes: React.FC<DossierNotesProps> = ({
           <div className="flex items-center justify-between font-mono text-[10px] uppercase">
             <span className="text-on-surface-variant">Compensation Alignment</span>
             <span className="text-tertiary bg-tertiary/10 border border-tertiary/20 px-1.5 py-0.5 rounded font-bold">
-              Within Band
+              Standard
             </span>
           </div>
           <div className="text-sm font-bold text-primary font-mono">
-            {telemetry?.atsMetadata.compensationBand || '$205,000 - $225,000 Base'}
+            {telemetry?.atsMetadata?.compensationBand || 'Not specified'}
           </div>
           <div className="text-xs text-on-surface-variant leading-relaxed">
-            {telemetry?.atsMetadata.approvedBudget}
+            {telemetry?.atsMetadata?.approvedBudget || 'In Review'}
           </div>
         </div>
       </div>
@@ -72,7 +72,7 @@ export const DossierNotes: React.FC<DossierNotesProps> = ({
             Hiring Manager Screening Notes & Feedback
           </span>
           <span className="font-mono text-[10px] text-tertiary">
-            {telemetry?.atsMetadata.checkrTier || 'Tier 1 Clean Clearance'}
+            {telemetry?.atsMetadata?.checkrTier || 'Verified Profile'}
           </span>
         </div>
 

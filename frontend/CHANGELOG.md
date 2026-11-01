@@ -2,7 +2,61 @@
 
 All notable changes, implementation tasks, and file updates for the Adobee Hive Talent Intelligence Platform are documented in this file.
 
+### [1.2.2] - 2026-11-01
+
+### Header UI Cleanup & Brand Alignment
+- **Brand Logo & Favicon**:
+  - Saved official open-hexagon clay bee mark from `https://reactbias.github.io/Adobee-Hive/brand/logo.svg` to [public/brand/logo.svg](file:///f:/Projects/adobee%20hiver/adobee-hiver/frontend/public/brand/logo.svg).
+  - Updated [src/components/layout/Header.tsx](file:///f:/Projects/adobee%20hiver/adobee-hiver/frontend/src/components/layout/Header.tsx) to render `/brand/logo.svg` in place of legacy amber polygon SVG.
+  - Updated [index.html](file:///f:/Projects/adobee%20hiver/adobee-hiver/frontend/index.html) favicon to `/brand/logo.svg`.
+- **Top Search Bar & Pipeline Badge Removal**:
+  - Removed top search input (`Search candidates... ⌘K`) and associated hotkey handlers from [Header.tsx](file:///f:/Projects/adobee%20hiver/adobee-hiver/frontend/src/components/layout/Header.tsx) as requested.
+  - Removed `Pipeline: Live Analyzer Sync` status indicator from header.
+
+### Light Theme Matching (https://reactbias.github.io/Adobee-Hive/)
+- **CSS Design Tokens ([src/index.css](file:///f:/Projects/adobee%20hiver/adobee-hiver/frontend/src/index.css))**:
+  - Synchronized `:root` palette tokens with reference design system:
+    - Pure white surfaces: `--color-background: 255 255 255`, `--color-surface: 255 255 255`
+    - Warm light surfaces: `--color-surface-dim: 247 247 245` (`#f7f7f5`), `--color-surface-container: 241 241 238` (`#f1f1ee`)
+    - Crisp borders: `--color-surface-container-high: 230 231 227` (`#e6e7e3`), `--color-surface-container-highest: 207 209 204` (`#cfd1cc`)
+    - Ink typography: `--color-on-surface: 22 24 29` (`#16181d`), `--color-on-surface-variant: 91 96 107` (`#5b606b`)
+    - Brand honey & clay accents: `--color-primary: 217 154 30` (`#d99a1e`), container tint: `251 241 217` (`#fbf1d9`), clay accent: `#a24f2c`
+    - Semantic success: `--color-tertiary: 31 122 77` (`#1f7a4d`)
+- **Tailwind Tokens ([tailwind.config.js](file:///f:/Projects/adobee%20hiver/adobee-hiver/frontend/tailwind.config.js))**:
+  - Aligned fixed tokens (`primary-fixed: #fbf1d9`, `primary-fixed-dim: #d99a1e`, `inverse-primary: #f2b63c`, `error: #b3261e`).
+- **Glassmorphism & Theme Init ([src/index.css](file:///f:/Projects/adobee%20hiver/adobee-hiver/frontend/src/index.css), [src/main.tsx](file:///f:/Projects/adobee%20hiver/adobee-hiver/frontend/src/main.tsx))**:
+  - Adapted `.glass-panel` for clean light mode backdrop (`rgba(255, 255, 255, 0.85)`).
+  - Defaulted application to light mode on initial load unless `'dark'` is stored in `localStorage`.
+
 ### [1.2.1] - 2026-11-01
+
+### PostgreSQL Role Authentication & Database Resolution (`db`, `backend`)
+- **Root Cause**: The named Docker volume `pgdata` was previously initialized with the superuser role `admin`. When `backend` started with `DATABASE_URL` configured for `postgres:postgres`, PostgreSQL rejected the connection with `FATAL: Role "postgres" does not exist`.
+- **Resolution**: Provisioned superuser role `postgres` with password `postgres` in the running cluster without data loss (`CREATE ROLE postgres WITH SUPERUSER LOGIN PASSWORD 'postgres';`).
+- **Verified**: `backend-1` connected cleanly, ran `init_db()` migrations, and started listening on `http://0.0.0.0:8000`. Confirmed `HTTP 200` on both `http://localhost:8000/docs` and `http://localhost:3000`.
+
+### Frontend Code Audit & Error Remediation
+- **Safe Property Access**:
+  - `CandidatePoolView.tsx`: Added safe optional chaining on `requisition?.hiringLead?.name` preventing `TypeError` on unseeded/loading states; added default requisition auto-selection on mount.
+  - `DossierView.tsx` & `DossierNotes.tsx`: Added safe chaining on `telemetry?.atsMetadata?....` and synchronized notes list on candidate transition.
+  - `CodeAuditCard.tsx`: Safely accessed `telemetry?.codeRepo` and removed hardcoded Elena Rostova statistics in favor of neutral telemetry fallbacks.
+  - `CandidateCard.tsx`: Safely defaulted `candidate.education` before `.split('(')[0]`.
+  - `CandidateHeaderBanner.tsx`: Replaced hardcoded subtitle with `{candidate.title || 'Candidate'} • {candidate.currentCompany}`.
+- **API & Query Robustness (`src/services/api.ts`)**:
+  - Guarded `saveChatSession` and `fetchChatSession` against empty/whitespace position IDs.
+  - Added React Query `enabled: Boolean(...)` guards to `useRequisition`, `useCandidates`, and `useCandidate`.
+- **UI & Visualization Refinements**:
+  - `JobPostingsView.tsx`: Relocated collapsible "Add Job Posting" form into a dedicated specification card cleanly positioned above department tabs.
+  - `SourcingDonut.tsx`: Replaced hardcoded SVG circle offsets with dynamically computed arc segments based on `sourcingChannels`.
+  - `main.tsx`: Synchronized initial theme class from `localStorage` preference on boot.
+- **Test Suite Verification**:
+  - `App.test.tsx`: Mocked `ensureOrganization` and used asynchronous `findByText` selectors. All 5 unit tests across `App.test.tsx` and `CopilotChat.test.tsx` now pass cleanly.
+
+### Frontend TypeScript Build Fixes (`types/index.ts`, `Sidebar.tsx`)
+- **`types/index.ts`**: Added missing `AnalyticsKPIs` type definition required by `KpiSummaryGrid.tsx`.
+- **`types/index.ts`**: Added optional properties (`phone`, `country`, `companies`, `highest_education_level`, `technical_skills`) to `BackendCandidateBrief` interface to align with candidate transformation helper.
+- **`Sidebar.tsx`**: Corrected `useRequisitions` hook return value destructuring from `{ requisitions }` to `{ data: requisitions = [] }`.
+- **Build Verified**: Verified clean compilation via `npx tsc --noEmit` and production build via `npm run build` (vite v5.4.21).
 
 ### Docker Compose & Environment Configuration (`.env`)
 - **Root `.env` Configuration**: Populated root `.env` with required PostgreSQL variables (`POSTGRES_USER=postgres`, `POSTGRES_PASSWORD=postgres`, `POSTGRES_DB=hr_database`) resolving the interpolation failure during `docker compose up --build`.

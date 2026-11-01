@@ -39,46 +39,30 @@ export const SourcingDonut: React.FC<SourcingDonutProps> = ({
                 strokeWidth="3.5"
                 className="text-surface-container"
               />
-              <circle
-                cx="18"
-                cy="18"
-                fill="none"
-                r="15.9155"
-                stroke="#f59e0b"
-                strokeWidth="3.5"
-                strokeDasharray="42 58"
-                strokeDashoffset="0"
-              />
-              <circle
-                cx="18"
-                cy="18"
-                fill="none"
-                r="15.9155"
-                stroke="#38bdf8"
-                strokeWidth="3.5"
-                strokeDasharray="31 69"
-                strokeDashoffset="-42"
-              />
-              <circle
-                cx="18"
-                cy="18"
-                fill="none"
-                r="15.9155"
-                stroke="#10b981"
-                strokeWidth="3.5"
-                strokeDasharray="18 82"
-                strokeDashoffset="-73"
-              />
-              <circle
-                cx="18"
-                cy="18"
-                fill="none"
-                r="15.9155"
-                stroke="#ffddb8"
-                strokeWidth="3.5"
-                strokeDasharray="9 91"
-                strokeDashoffset="-91"
-              />
+              {(() => {
+                let accumulatedOffset = 0;
+                const palette = ['#f59e0b', '#38bdf8', '#10b981', '#a855f7', '#ec4899'];
+                return sourcingChannels.map((ch, idx) => {
+                  const pct = Math.max(0, Math.min(100, ch.percentage));
+                  const strokeDasharray = `${pct} ${100 - pct}`;
+                  const strokeDashoffset = -accumulatedOffset;
+                  accumulatedOffset += pct;
+                  const color = palette[idx % palette.length];
+                  return (
+                    <circle
+                      key={ch.name}
+                      cx="18"
+                      cy="18"
+                      fill="none"
+                      r="15.9155"
+                      stroke={color}
+                      strokeWidth="3.5"
+                      strokeDasharray={strokeDasharray}
+                      strokeDashoffset={strokeDashoffset}
+                    />
+                  );
+                });
+              })()}
             </svg>
 
             <div className="absolute flex flex-col items-center justify-center text-center">
